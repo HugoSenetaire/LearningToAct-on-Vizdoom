@@ -28,7 +28,7 @@ class DoomSimulator:
         self.game_args = args['game_args']
 
         self._game = vizdoom.DoomGame()
-        self._game.set_vizdoom_path(os.path.join(vizdoom_path))
+        self._game.set_vizdoom_path(os.path.join(vizdoom_path,"vizdoom"))
         self._game.set_doom_game_path(os.path.join(vizdoom_path,'freedoom2.wad'))
         self._game.load_config(self.config)
         self._game.add_game_args(self.game_args)
