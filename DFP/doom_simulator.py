@@ -4,11 +4,11 @@ ViZDoom wrapper
 from __future__ import print_function
 import sys
 import os
-
-vizdoom_path = vizdoom.__file__
+import vizdoom
+vizdoom_path = os.path.dirname(vizdoom.__file__)
 # sys.path = [os.path.join(vizdoom_path,'bin/python3')] + sys.path
 
-import vizdoom
+
 # print(vizdoom.__file__)
 import random
 import time
