@@ -22,7 +22,7 @@ If you use this code or the provided environments in your research, please cite 
 - OpenCV python bindings
 - (optionally, cuda and cudnn)
 
-## Tested with: 
+## Tested with:
 - Ubuntu 14.04
 - python 3.4
 - tensorflow 1.0
