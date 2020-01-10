@@ -96,10 +96,11 @@ class Agent:
         # generate the list of available actions
         self.discrete_controls_to_net = np.array([i for i in range(len(self.discrete_controls)) if not i in self.discrete_controls_manual])
         self.num_manual_controls = len(self.discrete_controls_manual)
-        
+        ## net_discrete_actions is the list of actions (combination of all buttons) => size = 2^n -m where n is the number of buttons and m the number of impossible coombintations (e.g. left and right)
         self.net_discrete_actions = []
         
         if not self.opposite_button_pairs:
+            # this is the case where we do not have incompatible buttons
             # the set of actions is 2^{the set of buttons}
             for perm in it.product([False, True], repeat=len(self.discrete_controls_to_net)):
                 self.net_discrete_actions.append(list(perm))

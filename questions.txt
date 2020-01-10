@@ -1,0 +1,16 @@
+comment sont linkés les measurements a vizdoom ?
+dans D3_battle.cfg on introduit "available_game_variables" qui seront dans le state => c'est elles qu'on mesure je pense (et du coup dans runexp.py on a  [0,1,2] comme meas_to_predict)
+
+A quels measurements a-t-on acces grace a vizdoom ? (et donc qu'on peut rajouter pour tester le papier)
+- **ITEMCOUNT**     - Counts the number of picked up items during the current episode.
+- **ARMOR**         - Can be higher then 100!
+- **POSITION_X** (Y,Z dispo aussi)           - Position of the player, not available if `viz_nocheat` is enabled.
+- **VELOCITY_X**
+	==> on pourrait faire une course dans un labyrinthe ?
+=> a priori on a pas acces aux positions des ennemis 
+
+quel est le role du target maker
+
+de self.ag (dans multi_experiment)
+
+pourquoi y a t-il plusieurs simulateurs ?
