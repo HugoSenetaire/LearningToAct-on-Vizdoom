@@ -96,10 +96,11 @@ class Agent:
         # generate the list of available actions
         self.discrete_controls_to_net = np.array([i for i in range(len(self.discrete_controls)) if not i in self.discrete_controls_manual])
         self.num_manual_controls = len(self.discrete_controls_manual)
-        
+        ## net_discrete_actions is the list of actions (combination of all buttons) => size = 2^n -m where n is the number of buttons and m the number of impossible coombintations (e.g. left and right)
         self.net_discrete_actions = []
         
         if not self.opposite_button_pairs:
+            # this is the case where we do not have incompatible buttons
             # the set of actions is 2^{the set of buttons}
             for perm in it.product([False, True], repeat=len(self.discrete_controls_to_net)):
                 self.net_discrete_actions.append(list(perm))
@@ -215,16 +216,21 @@ class Agent:
         tf.global_variables_initializer().run(session=self.sess)
     
     def act(self, state_imgs, state_meas, objective_coeffs):
+        ##Used in actor.act with multi memory
+        ## USe postprocess_actions
         return self.postprocess_actions(self.act_net(state_imgs, state_meas[:,self.meas_for_net], objective_coeffs), self.act_manual(state_meas[:,self.meas_for_manual]))
     
     def act_net(self, state_imgs, state_meas, objective_coeffs):
+        ## Used in agent.act
+        #Act given a state and objective_coeffs : 
+        # Use prediction, mutltiply by objective coeffs (objective_coeffs define the objectives)
         raise NotImplementedError( "Agent should implement act_net, which takes the input state and outputs an action" )
     
     def act_manual(self, state_meas):
         return []
     
     class Actor:
-        # a small interface which will actually be used for taking actions
+        # a small interface with the simulator which will actually be used for taking actions
         def __init__(self, agent, objective_coeffs, random_prob, random_objective_coeffs):
             if objective_coeffs is None:
                 assert(random_prob == 1.)
@@ -264,6 +270,7 @@ class Agent:
                 return None
                 
         def act(self, state_imgs, state_meas):
+            # Not used anymore, inefficient
             if np.random.rand() < self.random_prob:
                 self.curr_predictions = None
                 return self.agent.random_actions(1)
@@ -274,6 +281,8 @@ class Agent:
             
         def act_with_multi_memory(self, multi_memory):
             # this is more efficient because reads the state only if it is needed (for a non-random action)
+            # Used in multi_experience_memory.add n step with actor
+            # Get action from agent using random or best prediction
             if np.random.rand() < self.random_prob:
                 self.curr_predictions = None
                 curr_act = self.agent.random_actions(multi_memory.num_heads)
@@ -292,6 +301,8 @@ class Agent:
     
     
     def train_one_batch(self, experience):
+        # Experience est un multi_experience memory
+
         state_imgs, state_meas, rwrds, terms, acts, targs, objs = experience.get_random_batch(self.batch_size)
         acts = self.preprocess_actions(acts)
         res = self.sess.run([self.tf_minim, self.short_summary, self.detailed_summary] + self.errs_to_print,
@@ -327,6 +338,8 @@ class Agent:
         
     def train(self, simulator, experience, num_steps, test_policy_experience=None):
         # load the model if available and initialize variables
+        # experience is a multi_experience_memory class (test_policy_experience egalement)
+        # Utilise train one batch
         if self.init_model:
             if self.load(self.init_model, init=True):
                 print('Loaded a model from', self.init_model)
@@ -348,7 +361,7 @@ class Agent:
         print('Filling the training memory')
         experience.add_n_steps_with_actor(simulator, 
                                           experience.capacity / simulator.num_simulators, 
-                                          self.train_actor, verbose=True)               
+                                          self.train_actor, verbose=True) #####SI ON VEUT STOCKER LES PREDICTIONS, ARGUMENT ou PAS FAIT               
         
         for _ in range(num_steps):
             if np.mod(self.curr_step, self.checkpoint_every) == 0:
@@ -358,7 +371,9 @@ class Agent:
                 self.test_policy(simulator, test_policy_experience, self.objective_coeffs, self.num_steps_per_policy_test, random_prob=0., write_summary=True)
             
             self.train_one_batch(experience)
+            # Tous les self.add_experiences_every, on add de l'expérience
             if np.mod(self.curr_step, self.add_experiences_every) == 0:
+                # Diminue la proba d'exploration selon une loi cheloue (inverse 1/x)
                 self.train_actor.random_prob = self.random_exploration_schedule(self.curr_step)
                 experience.add_n_steps_with_actor(simulator, 
                                                 self.new_memories_per_batch, 

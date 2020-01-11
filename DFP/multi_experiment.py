@@ -28,6 +28,7 @@ class MultiExperiment:
         if isinstance(simulator_args, dict):
             simulator_args = my_util.merge_two_dicts(defaults.simulator_args, simulator_args)
         else:
+            # if we have several simulators, simulator_args is a list of dict
             for n in range(len(simulator_args)):
                 simulator_args[n] = my_util.merge_two_dicts(defaults.simulator_args, simulator_args[n])
         train_experience_args = my_util.merge_two_dicts(defaults.train_experience_args, train_experience_args)
@@ -89,6 +90,7 @@ class MultiExperiment:
             assert('fc_obj_params' in agent_args)
     
         self.test_policy_experience = MultiExperienceMemory(test_policy_experience_args, multi_simulator = self.multi_simulator, target_maker = self.target_maker)
+        # maybe we coudl use more gpu here to maek training faster
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.1)  # avoid using all gpu memory
         self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options,log_device_placement=False))
 

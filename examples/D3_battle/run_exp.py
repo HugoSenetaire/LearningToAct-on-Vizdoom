@@ -28,6 +28,7 @@ def main(main_args):
 	simulator_args['maps'] = ['MAP01']
 	simulator_args['switch_maps'] = False
 	#train
+	# i'm not sure why we use 8 simulators here
 	simulator_args['num_simulators'] = 8
 	
 	## Experience
@@ -56,6 +57,7 @@ def main(main_args):
 	# preprocessing
 	agent_args['preprocess_input_images'] = lambda x: x / 255. - 0.5
 	agent_args['preprocess_input_measurements'] = lambda x: x / 100. - 0.5
+	# be careful with the scale of the measurments we study
 	targ_scale_coeffs = np.expand_dims((np.expand_dims(np.array([7.5,30.,1.]),1) * np.ones((1,len(target_maker_args['future_steps'])))).flatten(),0)
 	agent_args['preprocess_input_targets'] = lambda x: x / targ_scale_coeffs
 	agent_args['postprocess_predictions'] = lambda x: x * targ_scale_coeffs

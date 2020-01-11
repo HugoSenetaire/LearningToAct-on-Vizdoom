@@ -105,7 +105,7 @@ class MultiExperienceMemory:
             acts = multi_simulator.get_random_actions()
         self.add(*(multi_simulator.step(acts) +  (acts,objs,preds)))
         
-    def add_n_steps_with_actor(self, multi_simulator, num_steps, actor, verbose=False, write_predictions=False, write_logs = False, global_step=0):
+    def add_n_steps_with_actor(self, multi_simulator, num_steps, actor, verbose=False, write_predictions=False, write_logs = False, global_step=-1):
         ns = 0
         last_meas = np.zeros((multi_simulator.num_simulators,) + self.meas_shape)
         if write_predictions and not hasattr(self,'_predictions'):
@@ -119,7 +119,8 @@ class MultiExperienceMemory:
                 os.makedirs(log_dir)
             log_brief = open(self.log_prefix + '_brief.txt','a')
             log_detailed = open(self.log_prefix + '_detailed.txt','a')
-            log_detailed.write('Step {0}\n'.format(global_step))
+            log_detailed.write('Step {global_step}\n')
+            log_detailed.write("num_episode, nb_de_steps_totaux, durée de l'épisode, quantité de reward, | ammo, santé, frags finaux | ammo, health, frags moyen")
             start_times = time.time() * np.ones(multi_simulator.num_simulators)
             num_episode_steps = np.zeros(multi_simulator.num_simulators)
             accum_rewards = np.zeros(multi_simulator.num_simulators)
@@ -141,18 +142,26 @@ class MultiExperienceMemory:
                 print('%d/%d' % (ns * multi_simulator.num_simulators, num_steps * multi_simulator.num_simulators))
                 start_time = time.time()
 
+
+
+            #####====== GET ACTION(S ?) HERE One action for each simulator
             curr_act = actor.act_with_multi_memory(self)
             
             # actor has to return a np array of bools
             invalid_states = np.logical_not(np.array(self.curr_states_with_valid_history()))
             if actor.random_objective_coeffs:
                 actor.reset_objective_coeffs(np.where(invalid_states)[0].tolist())
+
+            ## Change les actions qui amènent à des states invalides ?
             curr_act[invalid_states] = actor.random_actions(np.sum(invalid_states))
             
             if write_predictions:
                 self.add_step(multi_simulator, curr_act.tolist(), actor.objectives_to_write(), actor.curr_predictions)
             else:
                 self.add_step(multi_simulator, curr_act.tolist(), actor.objectives_to_write())
+
+
+            
             if write_logs:
                 last_indices = np.array(self.get_last_indices())
                 last_rewards = self._rewards[last_indices]
