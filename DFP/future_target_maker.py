@@ -69,7 +69,11 @@ class FutureTargetMaker:
                 targets[ns, :len(self.meas_to_predict), :] = ((meas[curr_future_steps][:, self.meas_to_predict] - meas[None,sample][:, self.meas_to_predict])/meas_std[:, self.meas_to_predict]).transpose()
             else:
                 targets[ns, :len(self.meas_to_predict), :] = (meas[curr_future_steps][:, self.meas_to_predict] - meas[None,sample][:, self.meas_to_predict]).transpose()
+           
+
             invalid_samples = (n_episode[curr_future_steps] != n_episode[sample])
+            
+
             if self.invalid_targets_replacement == 'nan':
                 targets[ns, :len(self.meas_to_predict), invalid_samples] = np.nan # make invalid the entries which fall into the following episodes
             elif self.invalid_targets_replacement == 'last_valid':
