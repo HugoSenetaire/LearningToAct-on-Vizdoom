@@ -105,7 +105,7 @@ class MultiExperienceMemory:
             acts = multi_simulator.get_random_actions()
         self.add(*(multi_simulator.step(acts) +  (acts,objs,preds)))
         
-    def add_n_steps_with_actor(self, multi_simulator, num_steps, actor, verbose=False, write_predictions=False, write_logs = False, global_step=0):
+    def add_n_steps_with_actor(self, multi_simulator, num_steps, actor, verbose=False, write_predictions=False, write_logs = False, global_step=-1):
         ns = 0
         last_meas = np.zeros((multi_simulator.num_simulators,) + self.meas_shape)
         if write_predictions and not hasattr(self,'_predictions'):
@@ -120,6 +120,7 @@ class MultiExperienceMemory:
             log_brief = open(self.log_prefix + '_brief.txt','a')
             log_detailed = open(self.log_prefix + '_detailed.txt','a')
             log_detailed.write('Step {0}\n'.format(global_step))
+            log_detailed.write("num_episode, nb_de_steps_totaux, durée de l'épisode, quantité de reward, | ammo, santé, frags finaux | ammo, health, frags moyen")
             start_times = time.time() * np.ones(multi_simulator.num_simulators)
             num_episode_steps = np.zeros(multi_simulator.num_simulators)
             accum_rewards = np.zeros(multi_simulator.num_simulators)

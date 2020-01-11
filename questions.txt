@@ -14,3 +14,7 @@ quel est le role du target maker
 de self.ag (dans multi_experiment)
 
 pourquoi y a t-il plusieurs simulateurs ?
+
+comment est utilisée mémoire / futur 
+
+comment fait il le backward dans sess.run => loss definie dans make_losses => bizarre, il fait pas le produit scalaire des predictions avec le vecteur goal ???
