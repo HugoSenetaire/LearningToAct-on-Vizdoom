@@ -73,7 +73,8 @@ class FuturePredictorAgentAdvantage(Agent):
         return full_loss, errs_to_print, short_summary, detailed_summary
         
     def act_net(self, state_imgs, state_meas, objective_coeffs):
-        #Act given a state and objective_coeffs
+        #Act given a state and objective_coeffs : 
+        # Use prediction, mutltiply by objective coeffs (objective_coeffs define the objectives)
         if objective_coeffs.ndim == 1:
             curr_objective_coeffs = np.tile(objective_coeffs[None,:],(state_imgs.shape[0],1))
         else:
