@@ -52,6 +52,7 @@ class Agent:
         
         # net parameters
         self.conv_params = args['conv_params']
+        self.unet_params = args['unet_params']
         self.fc_img_params = args['fc_img_params']
         self.fc_meas_params = args['fc_meas_params']
         self.fc_joint_params = args['fc_joint_params']

@@ -24,17 +24,16 @@ def conv2d(input_, output_dim,
 
         return tf.nn.bias_add(tf.nn.conv2d(input_, w, strides=[1, d_h, d_w, 1], padding='SAME'), b)
 
-def conv2d_transpose(input_, output_shape, 
+def conv2d_transpose(input_, output_dim, 
         k_h=3, k_w=3, d_h=2, d_w=2, msra_coeff=1,
         name="deconv2d"):
-        output_dim = output_shape[-1]
-        with tf.variable_scope(name):
-            w = tf.get_variable('w', [k_h, k_w, input_.get_shape()[-1], output_dim],
-                            initializer=tf.truncated_normal_initializer(stddev=msra_coeff * msra_stddev(input_, k_h, k_w)))
-    
-
-        return tf.nn.conv2d_transpose(input_, w,output_shape=output_shape, strides=[1, d_h, d_w, 1], padding='SAME')
-
+      
+        # output_dim = output_shape[-1]
+        # with tf.variable_scope(name):
+            # w = tf.get_variable('w', [k_h, k_w, input_.get_shape()[-1], output_dim],
+        #                     initializer=tf.truncated_normal_initializer(stddev=msra_coeff * msra_stddev(input_, k_h, k_w)))
+        # return tf.nn.conv2d_transpose(input_, w,output_shape=tf.stack([64,input_.get_shape()[1]*2,input_.get_shape()[2]*2,input_.get_shape()[3]]), strides=[1, d_h, d_w, 1], padding='SAME')
+        return tf.keras.layers.Conv2DTranspose(output_dim, (k_h, k_w), strides=(d_h, d_w), padding='same')(input_)
 def lrelu(x, leak=0.2, name="lrelu"):
     with tf.variable_scope(name):
         f1 = 0.5 * (1 + leak)
@@ -57,9 +56,7 @@ def conv_encoder(data, params, name, msra_coeff=1):
             curr_inp = data
         else:
             curr_inp = layers[-1]
-            
         layers.append(lrelu(conv2d(curr_inp, param['out_channels'], k_h=param['kernel'], k_w=param['kernel'], d_h=param['stride'], d_w=param['stride'], name=name + str(nl), msra_coeff=msra_coeff)))
-        
     return layers[-1]
 
 
@@ -97,34 +94,37 @@ def conv_encoder_aux(data, params, name, msra_coeff=1):
         else:
             curr_inp = layers[-1]
         layers.append(lrelu(conv2d(curr_inp, param['out_channels'], k_h=param['kernel'], k_w=param['kernel'], d_h=param['stride'], d_w=param['stride'], name=name + str(nl), msra_coeff=msra_coeff)))
-        
     return layers
 
 def conv_decoder(data,layers_encoder, params, name, msra_coeff=1):
     layers = []
-    for nl, param in reversed(enumerate(params)):
-        if nl == len(params)-1:
-            continue
+    auxTabular = []
+    for nl, param in enumerate(params):
+        print("PARAM ENUMERATE", param["out_channels"])
+        auxTabular.append((nl,param))
+    for nl, param in reversed(auxTabular):
         if len(layers) == 0:
             curr_inp = data
         else:
             curr_inp = layers[-1]
-        outputShape = layers_encoder[nl].get_shape()
-        layers.append(lrelu(conv2d_transpose(curr_inp, param['out_channels'], k_h=param['kernel'], k_w=param['kernel'], d_h=param['stride'], d_w=param['stride'], name=name + str(nl), msra_coeff=msra_coeff)))
-        curr_inp = tf.concat([layers_encoder[nl],layers[-1]])  
-        layers.append(tf.nn.max_pool(curr_inp,ksize=(2,2),strides=(2,2),padding="same"))
+        layers.append(lrelu(conv2d_transpose(curr_inp, param["out_channels"], k_h=param['kernel'], k_w=param['kernel'], d_h=param['stride'], d_w=param['stride'], name=name + str(nl), msra_coeff=msra_coeff)))
+        curr_inp = tf.concat([layers_encoder[nl],layers[-1]],3)  
+        layers.append(lrelu(conv2d(curr_inp, param['out_channels'], k_h=2, k_w=2, d_h=1, d_w=1, name=name+ "CONVMIDDLE" + str(nl), msra_coeff=msra_coeff)))
     return layers[-1]
 
 def UNET(data,params,name,msra_coeff=1):
-    outputEncoded = conv_encoder(data, params, 'encoder', msra_coeff=msra_coeff)
-    print(outputEncoded)
+    outputEncoded = conv_encoder_aux(data, params, 'encoder', msra_coeff=msra_coeff)
+
     dataAux = conv2d(outputEncoded[-1], 32, 
         k_h=2, k_w=2, d_h=2, d_w=2, msra_coeff=msra_coeff,
         name="conv2dAUX")
-    outputDecoded = conv_decoder(dataAux,outputEncoded)
-    outputDecoded = conv2d(outputEncoded, 1, 
-        k_h=2, k_w=2, d_h=1, d_w=1, msra_coeff=msra_coeff,
-        name="UNETFINALCONV")
+    outputDecoded = conv_decoder(dataAux,outputEncoded,params,"decoder", msra_coeff=msra_coeff)
+    ####MODIFY TO GET PARAMETERS INSIDE :
+    outputDecoded = lrelu(conv2d_transpose(outputDecoded, 1, \
+                k_h=2, k_w=2, \
+                 d_h=1, d_w=1, \
+                  name="OUTPUT", msra_coeff=msra_coeff))
+
     return outputDecoded
 
 

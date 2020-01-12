@@ -71,7 +71,7 @@ def main(main_args):
 	# net parameters
 	agent_args['conv_params'] = np.array([(32,8,4), (64,4,2), (64,3,1)],
 									 dtype = [('out_channels',int), ('kernel',int), ('stride',int)])
-	agent_args['unet_params'] = np.array([(4,8,16), (2,2,2), (2,2,2)],
+	agent_args['unet_params'] = np.array([(4,2,2), (8,2,2), (16,2,2)],
 									 dtype = [('out_channels',int), ('kernel',int), ('stride',int)])
 	agent_args['fc_img_params']   = np.array([(512,)], dtype = [('out_dims',int)])
 	agent_args['fc_meas_params']  = np.array([(128,), (128,), (128,)], dtype = [('out_dims',int)]) 
