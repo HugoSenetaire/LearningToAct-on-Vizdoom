@@ -27,10 +27,11 @@ class DoomSimulator:
         #self._game.set_doom_game_path(os.path.join(vizdoom_path,'bin/freedoom2.wad'))
         self._game.load_config(self.config)
         self._game.add_game_args(self.game_args)
+    
         self.curr_map = 0
         #if not self.multiplayer:
         self._game.set_doom_map(self.maps[self.curr_map])
-
+       
         # set resolution
         try:
             self._game.set_screen_resolution(getattr(vizdoom.ScreenResolution, 'RES_%dX%d' % self.resolution))
@@ -95,15 +96,18 @@ class DoomSimulator:
             rwrd - reward after the step
             term - if the state after the step is terminal
         """
+
         self.init_game()
 
         rwrd = self._game.make_action(action, self.frame_skip)
         state = self._game.get_state()
 
+
         # ViZDoom 1.0
         #raw_img = state.image_buffer
 
-        # ViZDoom 1.1
+
+                    # ViZDoom 1.1
         if state is None:
             raw_img = None
             meas = None
@@ -113,10 +117,11 @@ class DoomSimulator:
             elif self.color_mode == 'GRAY':
                 raw_img = np.expand_dims(state.screen_buffer,0)
             meas = state.game_variables # this is a numpy array of game variables specified by the scenario
-
+        
+ 
         if self.resize:
             if self.num_channels == 1:
-                if raw_img is None:
+                if raw_img is None or (isinstance(raw_img, list) and raw_img[0] is None):
                     img = None
                 else:
                     img = cv2.resize(raw_img[0], (self.resolution[0], self.resolution[1]))[None,:,:]
@@ -128,12 +133,18 @@ class DoomSimulator:
         else:
             img = raw_img
 
+ 
         term = self._game.is_episode_finished() or self._game.is_player_dead()
+ 
+
 
         #print(term, meas, self._game.get_game_variable(vizdoom.GameVariable.USER2))
         #print(self.num, term, self._game.is_player_dead())
+
         if term:
+
             self.new_episode() # in multiplayer multi_simulator takes care of this
+            
             img = np.zeros((self.num_channels, self.resolution[1], self.resolution[0]), dtype=np.uint8)
             meas = np.zeros(self.num_meas, dtype=np.uint32) #TODO alternativly, vizdoom code has to be changed so that it doesn't output nan when an episode ends
 
@@ -156,6 +167,7 @@ class DoomSimulator:
         return self._game.is_new_episode()
 
     def next_map(self):
+
         if self.switch_maps:
             self.curr_map = (self.curr_map+1) % len(self.maps)
             self._game.set_doom_map(self.maps[self.curr_map])
@@ -164,6 +176,7 @@ class DoomSimulator:
         self.next_map()
         self.episode_count += 1
         self._game.new_episode()
+
 
     def close(self):
         self.close_game()

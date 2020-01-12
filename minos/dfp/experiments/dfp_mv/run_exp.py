@@ -12,7 +12,7 @@ simulator_args.update({
     "frame_skip" : 4,
     "color_mode" : 'GRAY',	
     "use_shaping_reward" : False,
-    "maps" : ['.MAP01'],
+    "maps" : ['MAP01'],
     "switch_maps" : False,
     "logdir" : "logs",
     "test_checkpoint" : 'checkpoints/2017_04_09_09_07_45',

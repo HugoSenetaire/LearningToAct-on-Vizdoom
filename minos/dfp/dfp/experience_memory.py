@@ -154,15 +154,18 @@ class ExperienceMemory:
             log_detailed_format = ' '.join([('{' + str(n) + '}') for n in range(4)]) + ' | ' + \
                           ' '.join([('{' + str(n+4) + '}') for n in range(meas_dim)]) + ' | ' + \
                           ' '.join([('{' + str(n+4+meas_dim) + '}') for n in range(meas_dim)]) + '\n'
-        for ns in range(int(num_steps)):
-            if verbose and time.time() - start_time > 1:
-                print('%d/%d' % (ns, num_steps))
-                start_time = time.time()
-
+        start_time = time.time()
+        import tqdm
+        for ns in tqdm.tqdm(range(int(num_steps))):
+            # if verbose and time.time() - start_time > 1:
+            #     print('%d/%d' % (ns, num_steps))
+            #     start_time = time.time()
+            
             curr_act = actor.act_with_multi_memory(self)
 
             # actor has to return a np array of bools
             invalid_states = np.logical_not(np.array(self.curr_states_with_valid_history()))
+ 
             #print(invalid_states)
             #print(actor.random_objective_coeffs)
             if actor.random_objective_coeffs:
@@ -173,6 +176,7 @@ class ExperienceMemory:
                 self.add_step(multi_simulator, acts=curr_act.tolist(), objs=actor.objectives_to_write(), preds=actor.curr_predictions)
             else:
                 self.add_step(multi_simulator, acts=curr_act.tolist(), objs=actor.objectives_to_write())
+
             if write_logs:
                 last_indices = np.array(self.get_last_indices())
                 last_rewards = self._data['rewards'][last_indices]
