@@ -154,12 +154,12 @@ class ExperienceMemory:
             log_detailed_format = ' '.join([('{' + str(n) + '}') for n in range(4)]) + ' | ' + \
                           ' '.join([('{' + str(n+4) + '}') for n in range(meas_dim)]) + ' | ' + \
                           ' '.join([('{' + str(n+4+meas_dim) + '}') for n in range(meas_dim)]) + '\n'
-        start_time = time.time()
-        import tqdm
-        for ns in tqdm.tqdm(range(int(num_steps))):
-            # if verbose and time.time() - start_time > 1:
-            #     print('%d/%d' % (ns, num_steps))
-            #     start_time = time.time()
+        # start_time = time.time()
+        # import tqdm
+        for ns in range(int(num_steps)):
+            if verbose and time.time() - start_time > 1:
+                print('%d/%d' % (ns, num_steps))
+                start_time = time.time()
             
             curr_act = actor.act_with_multi_memory(self)
 
