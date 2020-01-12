@@ -100,7 +100,6 @@ def conv_decoder(data,layers_encoder, params, name, msra_coeff=1):
     layers = []
     auxTabular = []
     for nl, param in enumerate(params):
-        print("PARAM ENUMERATE", param["out_channels"])
         auxTabular.append((nl,param))
     for nl, param in reversed(auxTabular):
         if len(layers) == 0:
