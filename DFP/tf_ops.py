@@ -116,7 +116,7 @@ def conv_decoder(data,layers_encoder, params, name, msra_coeff=1):
     return layers[-1]
 
 def UNET(data,params,name,msra_coeff=1):
-    outputEncoded = my_ops.conv_encoder(data, params, 'encoder', msra_coeff=msra_coeff)
+    outputEncoded = conv_encoder(data, params, 'encoder', msra_coeff=msra_coeff)
     dataAux = conv2d(outputEncoded[-1], 32, 
         k_h=2, k_w=2, d_h=2, d_w=2, msra_coeff=msra_coeff,
         name="conv2dAUX")
