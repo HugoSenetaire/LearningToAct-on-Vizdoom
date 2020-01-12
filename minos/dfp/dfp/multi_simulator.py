@@ -65,22 +65,22 @@ class MultiSimulator:
                 print('Exception when stepping simulator with id: ' + str(idx))
                 raise exc
 
-        with ThreadPoolExecutor(max_workers=self.num_simulators) as executor:
-            futures = []
-            for i in range(self.num_simulators):
-                future = executor.submit(act, i, self.simulators[i])
-                futures.append(future)
-            concurrent.futures.wait(futures)
-            # check if any exception
-            for f in futures:
-                f.result()
+        # with ThreadPoolExecutor(max_workers=self.num_simulators) as executor:
+        #     futures = []
+        #     for i in range(self.num_simulators):
+        #         future = executor.submit(act, i, self.simulators[i])
+        #         futures.append(future)
+        #     concurrent.futures.wait(futures)
+        #     # check if any exception
+        #     for f in futures:
+        #         f.result()
 
-        # data_out = {outp: [] for outp in self.outputs}
-        #
-        # for (sim, act) in zip(self.simulators, actions):
-        #     data_one_sim = sim.step(act)
-        #     for outp in self.outputs:
-        #         data_out[outp].append(data_one_sim[outp])
+        data_out = {outp: [] for outp in self.outputs}
+        
+        for (sim, act) in zip(self.simulators, actions):
+            data_one_sim = sim.step(act)
+            for outp in self.outputs:
+                data_out[outp].append(data_one_sim[outp])
 
         # print(data_out.keys())
         return data_out

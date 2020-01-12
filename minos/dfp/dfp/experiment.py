@@ -75,7 +75,7 @@ class Experiment:
                                                 target_maker=self.target_maker)
 
         if simulator_args['gpu']:
-            gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.1)  # avoid using all gpu memory
+            gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)  # avoid using all gpu memory
             self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options,log_device_placement=False))
         else:
             self.sess = tf.Session(config=tf.ConfigProto())

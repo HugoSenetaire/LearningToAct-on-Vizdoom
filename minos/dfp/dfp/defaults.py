@@ -28,7 +28,7 @@ train_experience_args['num_prev_acts_to_return'] = 0
 # Test policy experience
 test_experience_args = train_experience_args.copy()
 test_experience_args['memory_capacity'] = 60000  # NOTE has to be more than maximum possible test policy steps
-#test_experience_args['memory_capacity'] = 20000
+# test_experience_args['memory_capacity'] = 20000
 
 ## Agent
 agent_args = {}
