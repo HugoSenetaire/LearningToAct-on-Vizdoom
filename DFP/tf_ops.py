@@ -28,8 +28,8 @@ def conv2d_transpose(input_, output_shape,
         k_h=3, k_w=3, d_h=2, d_w=2, msra_coeff=1,
         name="deconv2d"):
         output_dim = output_shape[-1]
-    with tf.variable_scope(name):
-        w = tf.get_variable('w', [k_h, k_w, input_.get_shape()[-1], output_dim],
+        with tf.variable_scope(name):
+            w = tf.get_variable('w', [k_h, k_w, input_.get_shape()[-1], output_dim],
                             initializer=tf.truncated_normal_initializer(stddev=msra_coeff * msra_stddev(input_, k_h, k_w)))
     
 
