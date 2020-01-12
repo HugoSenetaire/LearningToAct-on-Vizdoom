@@ -21,7 +21,7 @@ def main(main_args):
 	## Simulator
 	simulator_args = {}
 	simulator_args['config'] = '../../maps/D3_battle.cfg'
-	simulator_args['resolution'] = (84,84)
+	simulator_args['resolution'] = (128,128)
 	simulator_args['frame_skip'] = 4
 	simulator_args['color_mode'] = 'GRAY'	
 	simulator_args['use_shaping_reward'] = False
@@ -69,7 +69,9 @@ def main(main_args):
 	agent_args['new_memories_per_batch'] = 8
 	
 	# net parameters
-	agent_args['conv_params']     = np.array([(32,8,4), (64,4,2), (64,3,1)],
+	agent_args['conv_params'] = np.array([(32,8,4), (64,4,2), (64,3,1)],
+									 dtype = [('out_channels',int), ('kernel',int), ('stride',int)])
+	agent_args['unet_params'] = np.array([(4,8,16), (2,2,2), (2,2,2)],
 									 dtype = [('out_channels',int), ('kernel',int), ('stride',int)])
 	agent_args['fc_img_params']   = np.array([(512,)], dtype = [('out_dims',int)])
 	agent_args['fc_meas_params']  = np.array([(128,), (128,), (128,)], dtype = [('out_dims',int)]) 

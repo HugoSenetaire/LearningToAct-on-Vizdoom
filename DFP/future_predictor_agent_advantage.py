@@ -21,8 +21,11 @@ class FuturePredictorAgentAdvantage(Agent):
         self.fc_adv_params = np.copy(self.fc_joint_params)
         self.fc_adv_params['out_dims'][-1] = len(self.net_discrete_actions) * self.target_dim
         p_img_conv = my_ops.conv_encoder(input_images, self.conv_params, 'p_img_conv', msra_coeff=0.9)
+        p_img_UNET = my_ops.flatten(my_ops.UNET(input_images,self.conv_params,'UNET',msra_coeff=0.9))
+        p_img_conv = tf.concat([p_img_conv,p_img_UNET])
         p_img_fc = my_ops.fc_net(my_ops.flatten(p_img_conv), self.fc_img_params, 'p_img_fc', msra_coeff=0.9)
         p_meas_fc = my_ops.fc_net(input_measurements, self.fc_meas_params, 'p_meas_fc', msra_coeff=0.9)
+        p_segm_conv = my_ops.RCNN(input_images, self.conv_params, 'p_img_conv',msra_coeff=0.9)
         if isinstance(self.fc_obj_params, np.ndarray):
             p_obj_fc = my_ops.fc_net(input_objectives, self.fc_obj_params, 'p_obj_fc', msra_coeff=0.9)
             p_concat_fc = tf.concat([p_img_fc,p_meas_fc,p_obj_fc], 1)
