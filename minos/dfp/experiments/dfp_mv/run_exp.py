@@ -15,7 +15,7 @@ simulator_args.update({
     "maps" : ['MAP01'],
     "switch_maps" : False,
     "logdir" : "logs",
-    "test_checkpoint" : 'checkpoints/2017_04_09_09_07_45',
+    "test_checkpoint" : 'checkpoints/logs',
     "simulator" : "doom",
     "game_args" : "",
     "gpu": True,

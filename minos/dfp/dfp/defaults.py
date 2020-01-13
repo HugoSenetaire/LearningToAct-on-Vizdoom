@@ -16,7 +16,7 @@ target_maker_args['invalid_targets_replacement'] = 'nan'
 ## Experience
 # Train experience
 train_experience_args = {}
-train_experience_args['memory_capacity'] = 10000  # TODO: automatically set as num_simulators*2500
+train_experience_args['memory_capacity'] = 20000  # TODO: automatically set as num_simulators*2500
 train_experience_args['default_history_length'] = 1
 train_experience_args['history_lengths'] = {}
 train_experience_args['history_step'] = 1
@@ -27,7 +27,7 @@ train_experience_args['num_prev_acts_to_return'] = 0
 
 # Test policy experience
 test_experience_args = train_experience_args.copy()
-test_experience_args['memory_capacity'] = 60000  # NOTE has to be more than maximum possible test policy steps
+test_experience_args['memory_capacity'] = 20000  # NOTE has to be more than maximum possible test policy steps
 # test_experience_args['memory_capacity'] = 20000
 
 ## Agent
