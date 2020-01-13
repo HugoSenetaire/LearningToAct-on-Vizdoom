@@ -38,6 +38,8 @@ class ExperienceMemory:
         self.data_specs = {
             'color': {'type': np.uint8, 'shape': (multi_simulator.num_channels, multi_simulator.resolution[1], multi_simulator.resolution[0])},
             'depth': {'type': np.float32, 'shape': (1, multi_simulator.resolution[1], multi_simulator.resolution[0])},
+            'segEnnemies': {"type": np.float32,'shape': (1, multi_simulator.resolution[1], multi_simulator.resolution[0])},
+            'segMedkit': {"type": np.float32,'shape': (1, multi_simulator.resolution[1], multi_simulator.resolution[0])},
             'measurements': {'type': np.float32, 'shape': (multi_simulator.num_meas,)},
             'force': {'type': np.float32, 'shape': (4,1)},   # TODO parameterize
             'audiopath': {'type': np.float32, 'shape': (8,1)},  # TODO parameterize
@@ -59,6 +61,8 @@ class ExperienceMemory:
         self.state_sensory_shapes = {
             'color': self.data_specs['color']['shape'][1:] + (self.history_lengths['color']*self.data_specs['color']['shape'][0],),
             'depth': self.data_specs['depth']['shape'][1:] + (self.history_lengths['depth']*self.data_specs['depth']['shape'][0],),
+            'segEnnemies': self.data_specs['segEnnemies']['shape'][1:] + (self.history_lengths['segEnnemies']*self.data_specs['segEnnemies']['shape'][0],),
+            'segMedkit': self.data_specs['segMedkit']['shape'][1:] + (self.history_lengths['segMedkit']*self.data_specs['segMedkit']['shape'][0],),
             'measurements': (self.history_lengths['measurements']*self.data_specs['measurements']['shape'][0],),
             'force': (self.history_lengths['force']*self.data_specs['force']['shape'][0],),
             'audiopath': (self.history_lengths['audiopath']*self.data_specs['audiopath']['shape'][0],),
@@ -246,7 +250,16 @@ class ExperienceMemory:
             for (ni,index) in enumerate(indices):
                 frame_slice = np.arange(int(index) - history_length*self.history_step + 1, (int(index) + 1), self.history_step) % self.capacity
                 frames[ni*history_length:(ni+1)*history_length] = frame_slice
-            
+
+
+            if modality == 'segEnnemies':
+                reshape_size = (self.state_sensory_shapes['segEnnemies'][2],) + self.state_sensory_shapes['segEnnemies'][:2]
+                states['segEnnemies'] = np.transpose(np.reshape(np.take(self._data['segEnnemies'], frames, axis=0),
+                                                           (len(indices),) + reshape_size), [0,2,3,1]).astype(np.float32)
+            if modality == 'segMedkit':
+                reshape_size = (self.state_sensory_shapes['segMedkit'][2],) + self.state_sensory_shapes['segMedkit'][:2]
+                states['segMedkit'] = np.transpose(np.reshape(np.take(self._data['segMedkit'], frames, axis=0),
+                                                           (len(indices),) + reshape_size), [0,2,3,1]).astype(np.float32)
             if modality == 'color':
                 reshape_size = (self.state_sensory_shapes['color'][2],) + self.state_sensory_shapes['color'][:2]
                 states['color'] = np.transpose(np.reshape(np.take(self._data['color'], frames, axis=0),

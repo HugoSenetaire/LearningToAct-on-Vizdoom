@@ -70,6 +70,9 @@ class Agent:
         self.goalroomtype_fc_params = args['goalroomtype_fc_params']
         #self.valadv_fc_params = args['valadv_fc_params']
         self.weight_decay = args['weight_decay']
+        self.unet_params = args['unet_params'] 
+        self.segEnnemies_fc_params = args['segEnnemies_fc_params']
+        self.segMedkit_fc_params = args['segMedkit_fc_params']
 
         # optimization parameters
         self.batch_size = args['batch_size']
@@ -322,6 +325,7 @@ class Agent:
         #print(terms[has_term])
 
         # Populate inputs - sensory inputs, actions, and targets to predict
+
         feed_dict = {self.input_sensory[m]: states[m] for m in self.modalities}
         feed_dict.update({self.input_targets: targs, self.input_actions: acts, self.input_objective_coeffs: objs})
         res = self.sess.run([self.tf_minim, self.short_summary, self.detailed_summary] + self.errs_to_print, \
@@ -358,6 +362,8 @@ class Agent:
                 print('Could not load a model from', self.init_model)
         else:
             print('No model to load')
+
+
         if not os.path.exists(self.checkpoint_dir):
             os.makedirs(self.checkpoint_dir)
         if not os.path.exists(os.path.join(self.log_dir, self.model_dir)):

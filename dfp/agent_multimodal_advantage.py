@@ -64,6 +64,7 @@ class AgentMultimodalAdvantage(Agent):
             elif modality == 'roomType':
                 roomtype_fc = my_ops.fc_net(input_sensory['roomType'], self.roomtype_fc_params, 'roomtype_fc', msra_coeff=0.9)
                 sensory_embeddings['roomType'] = roomtype_fc
+            
             else:
                 raise Exception('Unsupported input modality %s' % modality)
 
@@ -81,6 +82,15 @@ class AgentMultimodalAdvantage(Agent):
                 roomtype_fc = my_ops.fc_net_with_soft_max(input_concat_fc, self.infer_roomtype_fc_params, 'infer_roomType_fc', msra_coeff=0.9)
                 sensory_embeddings[modality] = roomtype_fc
                 infer_sensory_embeddings[modality] = roomtype_fc
+            elif modality == 'segEnnemies':
+                segEnnemies_UNET = my_ops.UNET(input_sensory['color'],self.unet_params,'UNETEnnemies',msra_coeff=0.9)
+                print(segEnnemies_UNET.get_shape())
+                sensory_embeddings[modality] =  my_ops.fc_net(my_ops.flatten(segEnnemies_UNET), self.segEnnemies_fc_params, 'segEnnemies_fc', msra_coeff=0.9)
+                infer_sensory_embeddings[modality] = segEnnemies_UNET
+            elif modality == 'segMedkit' :
+                segMedkit_UNET = my_ops.UNET(input_sensory['color'],self.unet_params,'UNETMedKit',msra_coeff=0.9)
+                sensory_embeddings[modality] =  my_ops.fc_net(my_ops.flatten(segMedkit_UNET), self.segEnnemies_fc_params, 'segMedkit_fc', msra_coeff=0.9)
+                infer_sensory_embeddings[modality] = segMedkit_UNET
             else:
                 raise Exception('Unsupported infer modality %s' % modality)
 
@@ -141,6 +151,7 @@ class AgentMultimodalAdvantage(Agent):
         per_infer_sensory_loss = []
         for modality in self.infer_modalities:
             # TODO: crossentropy loss for roomType (one per history element)
+
             sensory_loss = my_ops.mse_ignore_nans(infer_sensory[modality],
                                                   input_infer_sensory_preprocessed[modality],
                                                   reduction_indices=0)

@@ -38,6 +38,8 @@ agent_args['agent_type'] = 'advantage'
 
 # preprocessing
 agent_args['preprocess_sensory'] = {'color': lambda x: x / 255. - 0.5,
+                                    'segEnnemies' : lambda x: x,
+                                    'segMedkit' : lambda x : x,
                                     'measurements': lambda x: x,
                                     'audio': lambda x: x / 255. - 0.5,
                                     'audiopath': lambda x: x,
@@ -102,7 +104,10 @@ agent_args['audiopath_fc_params'] = np.array([(128,), (128,), (128,)], dtype = [
 agent_args['joint_fc_params'] = np.array([(512,), (-1,)], dtype = [('out_dims',int)]) # we put -1 here because it will be automatically replaced when creating the net
 agent_args['infer_meas_fc_params'] = np.array([(512,), (-1,)], dtype = [('out_dims',int)]) # we put -1 here because it will be automatically replaced when creating the net
 agent_args['weight_decay'] = 0.00000
-
+agent_args['segEnnemies_fc_params']   = np.array([(512,)], dtype = [('out_dims',int)])
+agent_args['segMedkit_fc_params']   = np.array([(512,)], dtype = [('out_dims',int)])
+agent_args['unet_params'] = np.array([(4,2,2), (8,2,2), (16,2,2)],
+									 dtype = [('out_channels',int), ('kernel',int), ('stride',int)])
 ## Experiment
 experiment_args = {}
 experiment_args['num_train_iterations'] = 410000 #820000

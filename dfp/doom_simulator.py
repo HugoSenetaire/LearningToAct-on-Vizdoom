@@ -5,7 +5,7 @@ import scipy
 import sys
 import vizdoom
 import cv2
-
+import copy
 import numpy as np
 
 
@@ -85,8 +85,28 @@ class DoomSimulator:
             self._game.close()
             self.game_initialized = False
 
-    def getId(self,labels,output):
-        return True
+    def getId(self,state,output):
+        if state is None :
+            return None
+        index = []
+        segmentation = copy.deepcopy(state.labels_buffer)
+        for l in state.labels:
+            if l.object_name== output:
+                index.append(l.value)
+ 
+        if len(index)>1:
+            for i in range(1,len(index)):
+                np.where(segmentation==index[i],np.ones(np.shape(segmentation))*index[0],segmentation)
+
+        if len(index)>0:
+            segmentation = np.where(segmentation==index[0],1.,0.)
+        else :
+            segmentation = np.zeros(np.shape(segmentation))
+
+        if self.resize:
+            segmentation=np.around(cv2.resize(segmentation, (self.resolution[0], self.resolution[1]))[None,:,:])
+
+        return segmentation
 
 
     def step(self, action=0):
@@ -182,8 +202,30 @@ class DoomSimulator:
                 data_out[outp] = term
             if outp == 'depth':
                 data_out[outp] = depth
-            # if outp == 'segEnnemies':
-                # data_out[outp] = 
+            if outp == 'segEnnemies':
+                # print("outp")
+                # found = False
+                # for l in state.labels:
+                #     if l.object_name=="DoomImp":
+                #         found =True
+                #     print(l.object_name,l.value)
+                data_out[outp] = self.getId(state,"DoomImp")
+                # print(data_out[outp].shape)
+                # print(set(list(data_out[outp].flatten())))
+                # print(np.sum(np.where(data_out[outp]==1,1,0)))
+                # if found :
+                #     assert(1==0)
+                
+
+            if outp == 'segMedkit':
+                # print("outp")
+                # for l in state.labels:
+                    # print(l.object_name,l.value)
+                data_out[outp] = self.getId(state,"DoomImp")
+                # print(data_out[outp].shape)
+                # print(data_out[outp])
+      
+        
             
         return data_out
 

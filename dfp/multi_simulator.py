@@ -58,9 +58,9 @@ class MultiSimulator:
             try:
                 response = s.step(actions[idx])
                 if self.simulator_type == 'room_simulator':
-                    response = self._convert_observation(s, response, self.outputs)
+                    response = self._convert_observation(s, response, self.outputs) ## ATTENTION DANS DOOM ON MODIFIE DIRECTEMENT LES DATA DANS DOOM SIMULATOR
                 for outp in self.outputs:
-                    data_out[outp][idx] = response[outp]
+                    data_out[outp][idx] = response[outp] # ICI LES DATA ONT LA BONNE SHAPE
             except Exception as exc:
                 print('Exception when stepping simulator with id: ' + str(idx))
                 raise exc

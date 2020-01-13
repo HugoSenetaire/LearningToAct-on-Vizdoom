@@ -8,7 +8,7 @@ simulator_args = vars(expt_common.run_exp_parse_args())
 
 simulator_args.update({
     "config" : '../../maps/D3_battle.cfg',
-    "resolution" : (84,84),
+    "resolution" : (64,64),
     "frame_skip" : 4,
     "color_mode" : 'GRAY',	
     "use_shaping_reward" : False,
@@ -34,12 +34,16 @@ targ_scale_coeffs = np.expand_dims((np.expand_dims(np.array([7.5,30.,1.]),1) * n
 
 # targ_scale_coeffs = np.expand_dims((np.expand_dims(np.array([1., 1., 1., 1.]), 1)
                                     # * np.ones((1, len(target_maker_args['future_steps'])))).flatten(), 0)
+
 agent_args = {
-    'modalities': ['color', 'measurements', 'depth'],
+    'modalities': ['color', 'measurements', 'depth', "segEnnemies", "segMedkit"],
     'preprocess_input_targets': lambda x: x / targ_scale_coeffs,
     'postprocess_predictions': lambda x: x * targ_scale_coeffs,
-    'objective_coeffs_meas': np.array([1, 0.5, 0.5])
+    'objective_coeffs_meas': np.array([1, 0.5, 0.5]),
+    'infer_modalities': ["segEnnemies","segMedkit"]
 }
+agent_args['unet_params'] = np.array([(4,2,2), (8,2,2), (16,2,2)],
+									 dtype = [('out_channels',int), ('kernel',int), ('stride',int)])
 
 train_experience_args = {
     'default_history_length': 1,
