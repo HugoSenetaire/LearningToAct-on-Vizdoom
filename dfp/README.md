@@ -1,23 +1,26 @@
-# Direct Future Prediction Agent for MINOS
+# Adaptation of code from the paper "Learning to Act by Predicting the Future" by Alexey Dosovitskiy and Vladlen Koltun for use in MINOS simulator.
 
-This repository contains code based on the paper [Learning to Act by Predicting the Future](https://github.com/IntelVCL/DirectFuturePrediction) by Alexey Dosovitskiy and Vladlen Koltun, adapted for use with the MINOS simulator.
+If you use this code please cite the following paper in addition to the MINOS paper:
 
-## Installing
+    @inproceedings{DK2017,
+    author    = {Alexey Dosovitskiy and Vladlen Koltun},
+    title     = {Learning to Act by Predicting the Future},
+    booktitle = {International Conference on Learning Representations (ICLR)},
+    year      = {2017}
+    }
 
-Make sure you have the MINOS library installed on your system, and then follow the guide in [dfp](dfp) to install prerequisites for this code.
+## Installing dependencies
+Run `pip install -r requirements.txt`.
 
 ## Running
+- If you have multiple gpus, make sure that only one is visible with
 
-See the example experiment configurations in [experiments](experiments). You can train an agent from inside a specific configuration directory using:
+        export CUDA_VISIBLE_DEVICES=NGPU
 
-```
-python3 run_exp.py train --env_config objectgoal_suncg_sf --gpu
-```
+    where NGPU is the number of GPU you want to use, or "" if you do not want to use a gpu
 
-Then, testing can be done through:
+- For speeding things up you may want to prepend "taskset -c NCORE" before the command, where NCORE is the number of the core to be used, for example:
 
-```
-python3 run_exp.py test --env_config objectgoal_suncg_sf --gpu --test_checkpoint checkpoints/<timestamp>
-```
+        taskset -c 1 python3 run_exp.py train
 
-By replacing `test` with `show` you can visualize the test episodes.  Use `python3 run_exp.py --help` to get usage information for additional command line arguments.  Refer to the [MINOS](https://github.com/minosworld/minos) instructions for more details on parameters and environment configurations.
+  When training with a GPU, one core seems to perform the best. Without a GPU, you may want 4 or 8 cores.
