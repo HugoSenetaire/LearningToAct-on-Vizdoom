@@ -40,7 +40,14 @@ agent_args = {
     'preprocess_input_targets': lambda x: x / targ_scale_coeffs,
     'postprocess_predictions': lambda x: x * targ_scale_coeffs,
     'objective_coeffs_meas': np.array([1, 0.5, 0.5]),
-    'infer_modalities': ["segEnnemies","segMedkit"]
+    'infer_modalities': ["segEnnemies","segMedkit"],
+    'start_learningtoact_training_iter' : 10000,
+    'freezeType' : "None" ,
+    #Possibility are "None" : No Freeze; "Partial" : Only the end is trained; "All": Everything freezed 
+    # 'coefs_loss' : [(0.,1.0),(0.8,0.2)], # coefs_loss[0] = (target_loss,infer_loss) before training learning to act
+    'coefs_loss' : [0.,0.5], # coefs_loss [0] : coefficient for learning to act when not learning to act; coef[1] after
+    'test_inference_every' : 500,
+    'change_inference_dataset_every':10000,
 }
 agent_args['unet_params'] = np.array([(4,2,2), (8,2,2), (16,2,2)],
 									 dtype = [('out_channels',int), ('kernel',int), ('stride',int)])

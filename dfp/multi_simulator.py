@@ -54,16 +54,16 @@ class MultiSimulator:
 
         data_out = {outp: self.num_simulators*[None] for outp in self.outputs}
 
-        def act(idx, s):
-            try:
-                response = s.step(actions[idx])
-                if self.simulator_type == 'room_simulator':
-                    response = self._convert_observation(s, response, self.outputs) ## ATTENTION DANS DOOM ON MODIFIE DIRECTEMENT LES DATA DANS DOOM SIMULATOR
-                for outp in self.outputs:
-                    data_out[outp][idx] = response[outp] # ICI LES DATA ONT LA BONNE SHAPE
-            except Exception as exc:
-                print('Exception when stepping simulator with id: ' + str(idx))
-                raise exc
+        # def act(idx, s):
+        #     try:
+        #         response = s.step(actions[idx])
+        #         if self.simulator_type == 'room_simulator':
+        #             response = self._convert_observation(s, response, self.outputs) ## ATTENTION DANS DOOM ON MODIFIE DIRECTEMENT LES DATA DANS DOOM SIMULATOR
+        #         for outp in self.outputs:
+        #             data_out[outp][idx] = response[outp] # ICI LES DATA ONT LA BONNE SHAPE
+        #     except Exception as exc:
+        #         print('Exception when stepping simulator with id: ' + str(idx))
+        #         raise exc
 
         # with ThreadPoolExecutor(max_workers=self.num_simulators) as executor:
         #     futures = []

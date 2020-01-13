@@ -123,7 +123,7 @@ class AgentMultimodalAdvantage(Agent):
         return infer_sensory_embeddings, pred_all, pred_relevant
 
     def make_losses(self, infer_sensory, input_infer_sensory_preprocessed,
-                    pred_relevant, targets_preprocessed, objective_indices, objective_coeffs):
+                    pred_relevant, targets_preprocessed, objective_indices, objective_coeffs,coefs_loss):
         """
         Setup the losses
 
@@ -159,7 +159,13 @@ class AgentMultimodalAdvantage(Agent):
         infer_sensory_loss = tf.reduce_sum(per_infer_sensory_loss)
 
         # Combined loss
-        loss = target_loss + infer_sensory_loss
+        # lambda1, lambda2 = self.coefs_loss[indexCoefs]
+  
+        
+ 
+        loss = coefs_loss * target_loss + (1-coefs_loss) * infer_sensory_loss
+        
+
 
         # compute objective value, just for logging purposes
         #print(objective_coeffs[None,:].shape, targets_preprocessed[:,objective_indices].get_shape())

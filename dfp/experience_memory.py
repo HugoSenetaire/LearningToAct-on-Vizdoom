@@ -118,7 +118,7 @@ class ExperienceMemory:
 
         return terminals
 
-    def add_step(self, multi_simulator, acts = None, objs=None, preds=None):
+    def add_step(self, multi_simulator, acts = None, objs=None, preds=None,need_seg = False):
         if acts == None:
             acts = multi_simulator.get_random_actions()
         data_to_add = multi_simulator.step(acts)
@@ -127,9 +127,26 @@ class ExperienceMemory:
             data_to_add['objectives'] = objs
         if not (preds is None):
             data_to_add['predictions'] = preds
-        return self.add(data_to_add)
+        
+        # USE THE LINE BELOW TO MAKE SURE WE GET PROPER IMAGES FOR SEGMENTATION
+        if need_seg :
+            nbSegEnnemies = 0
+            nbSegMedikit = 0
+            for i in range(len(multi_simulator.simulators)):
+                if data_to_add["segEnnemies"][i] is None or data_to_add["segMedkit"][i] is None :
+                    continue
+                if np.sum(data_to_add["segEnnemies"][i])>0:
+                    nbSegEnnemies+=1
+                if np.sum(data_to_add["segMedkit"])>0:
+                    nbSegMedikit+=1
+            if float(nbSegEnnemies)/len(multi_simulator.simulators)>0.8 or \
+             float(nbSegMedikit)/len(multi_simulator.simulators)>0.8 :
+                return self.add(data_to_add)
+            return False
+        else :
+            return self.add(data_to_add)
 
-    def add_n_steps_with_actor(self, multi_simulator, num_steps, actor, verbose=False, write_predictions=False, write_logs = False, global_step=0):
+    def add_n_steps_with_actor(self, multi_simulator, num_steps, actor, verbose=False, write_predictions=False, write_logs = False, global_step=0,need_seg = False):
         if write_predictions and not ('predictions' in self._data):
             self._data['predictions'] = my_util.make_array(shape=(self.capacity,) + actor.predictions_shape, dtype=np.float32, shared=self.shared, fill_val=0.)
         if verbose or write_logs:
@@ -161,7 +178,8 @@ class ExperienceMemory:
                           ' '.join([('{' + str(n+4+meas_dim) + '}') for n in range(meas_dim)]) + '\n'
         # start_time = time.time()
         # import tqdm
-        for ns in range(int(num_steps)):
+        ns = 0
+        while ns< num_steps:
             if verbose and time.time() - start_time > 1:
                 print('%d/%d' % (ns, num_steps))
                 start_time = time.time()
@@ -178,10 +196,14 @@ class ExperienceMemory:
             curr_act[invalid_states] = actor.random_actions(np.sum(invalid_states)) #np.array(multi_simulator.get_random_actions())[invalid_states]
 
             if write_predictions:
-                self.add_step(multi_simulator, acts=curr_act.tolist(), objs=actor.objectives_to_write(), preds=actor.curr_predictions)
+                aux = self.add_step(multi_simulator, acts=curr_act.tolist(), objs=actor.objectives_to_write(), preds=actor.curr_predictions,need_seg =need_seg)
             else:
-                self.add_step(multi_simulator, acts=curr_act.tolist(), objs=actor.objectives_to_write())
-
+                aux = self.add_step(multi_simulator, acts=curr_act.tolist(), objs=actor.objectives_to_write(),need_seg = need_seg)
+            
+            # If we add a value, it's ok, we continue:
+            if aux is not False:
+                ns+=1
+            
             if write_logs:
                 last_indices = np.array(self.get_last_indices())
                 last_rewards = self._data['rewards'][last_indices]
