@@ -28,7 +28,7 @@ class DoomSimulator:
         self._game.load_config(self.config)
         self._game.add_game_args(self.game_args)
         self._game.set_depth_buffer_enabled(True)
-    
+        self._game.set_labels_buffer_enabled(True)
         self.curr_map = 0
         #if not self.multiplayer:
         self._game.set_doom_map(self.maps[self.curr_map])
@@ -85,6 +85,10 @@ class DoomSimulator:
             self._game.close()
             self.game_initialized = False
 
+    def getId(self,labels,output):
+        return True
+
+
     def step(self, action=0):
         """
         Action can be either the number of action or the actual list defining the action
@@ -112,6 +116,7 @@ class DoomSimulator:
             raw_img = None
             meas = None
             depth=None
+            label = None
         else:
             if self.color_mode == 'RGB':
                 raw_img = state.screen_buffer
@@ -119,20 +124,30 @@ class DoomSimulator:
                 raw_img = np.expand_dims(state.screen_buffer,0)
             meas = state.game_variables # this is a numpy array of game variables specified by the scenario
             depth=state.depth_buffer
+            label = state.labels_buffer
+
+        
+
+
 
         
         if self.resize:
             if self.num_channels == 1:
+                # Resize
                 if raw_img is None or (isinstance(raw_img, list) and raw_img[0] is None):
                     img = None
                 else:
                     img = cv2.resize(raw_img[0], (self.resolution[0], self.resolution[1]))[None,:,:]
                     # img = scipy.misc.imresize(raw_img[0], (self.resolution[0], self.resolution[1]))[None,:,:]
                     # img=raw_img[0].resize((self.resolution[0], self.resolution[1]))[None,:,:]
+
+                # Resize depth input
                 if depth is None or (isinstance(depth, list) and depth[0] is None):
                     depth=None
                 else:
-                    depth=cv2.resize(depth[0], (self.resolution[0], self.resolution[1]))[None,:,:]
+                    depth=cv2.resize(depth, (self.resolution[0], self.resolution[1]))[None,:,:]
+
+
 
             else:
                 raise NotImplementedError('not implemented for non-Grayscale images')
@@ -166,6 +181,9 @@ class DoomSimulator:
                 data_out[outp] = term
             if outp == 'depth':
                 data_out[outp] = depth
+            # if outp == 'segEnnemies':
+                # data_out[outp] = 
+            
         return data_out
 
     def get_random_action(self):
