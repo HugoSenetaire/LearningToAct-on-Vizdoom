@@ -27,6 +27,7 @@ class DoomSimulator:
         #self._game.set_doom_game_path(os.path.join(vizdoom_path,'bin/freedoom2.wad'))
         self._game.load_config(self.config)
         self._game.add_game_args(self.game_args)
+        self._game.set_depth_buffer_enabled(True)
     
         self.curr_map = 0
         #if not self.multiplayer:
@@ -102,7 +103,6 @@ class DoomSimulator:
         rwrd = self._game.make_action(action, self.frame_skip)
         state = self._game.get_state()
 
-
         # ViZDoom 1.0
         #raw_img = state.image_buffer
 
@@ -111,14 +111,16 @@ class DoomSimulator:
         if state is None:
             raw_img = None
             meas = None
+            depth=None
         else:
             if self.color_mode == 'RGB':
                 raw_img = state.screen_buffer
             elif self.color_mode == 'GRAY':
                 raw_img = np.expand_dims(state.screen_buffer,0)
             meas = state.game_variables # this is a numpy array of game variables specified by the scenario
+            depth=state.depth_buffer
+
         
- 
         if self.resize:
             if self.num_channels == 1:
                 if raw_img is None or (isinstance(raw_img, list) and raw_img[0] is None):
@@ -127,6 +129,10 @@ class DoomSimulator:
                     img = cv2.resize(raw_img[0], (self.resolution[0], self.resolution[1]))[None,:,:]
                     # img = scipy.misc.imresize(raw_img[0], (self.resolution[0], self.resolution[1]))[None,:,:]
                     # img=raw_img[0].resize((self.resolution[0], self.resolution[1]))[None,:,:]
+                if depth is None or (isinstance(depth, list) and depth[0] is None):
+                    depth=None
+                else:
+                    depth=cv2.resize(depth[0], (self.resolution[0], self.resolution[1]))[None,:,:]
 
             else:
                 raise NotImplementedError('not implemented for non-Grayscale images')
@@ -158,6 +164,8 @@ class DoomSimulator:
                 data_out[outp] = rwrd
             if outp == 'terminals':
                 data_out[outp] = term
+            if outp == 'depth':
+                data_out[outp] = depth
         return data_out
 
     def get_random_action(self):

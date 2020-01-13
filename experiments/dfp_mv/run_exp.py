@@ -35,7 +35,7 @@ targ_scale_coeffs = np.expand_dims((np.expand_dims(np.array([7.5,30.,1.]),1) * n
 # targ_scale_coeffs = np.expand_dims((np.expand_dims(np.array([1., 1., 1., 1.]), 1)
                                     # * np.ones((1, len(target_maker_args['future_steps'])))).flatten(), 0)
 agent_args = {
-    'modalities': ['color', 'measurements'],
+    'modalities': ['color', 'measurements', 'depth'],
     'preprocess_input_targets': lambda x: x / targ_scale_coeffs,
     'postprocess_predictions': lambda x: x * targ_scale_coeffs,
     'objective_coeffs_meas': np.array([1, 0.5, 0.5])
