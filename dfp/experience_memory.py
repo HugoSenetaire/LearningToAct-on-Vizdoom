@@ -8,6 +8,7 @@ import random
 import time
 
 import matplotlib.pyplot as plt
+plt.rcParams['animation.ffmpeg_path'] ='C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe'
 import matplotlib.animation as manimation
 import numpy as np
 

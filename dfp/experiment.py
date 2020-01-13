@@ -121,7 +121,7 @@ class Experiment:
             self.test_experience.show(start_index=0,
                                       end_index=num_steps,
                                       display=True, write_imgs=False,
-                                      show_predictions=self.show_predictions,
+                                      show_predictions=False,
                                       net_discrete_actions = self.ag.net_discrete_actions)
         elif args['mode'] == 'test':
             self.test_experience.log_prefix = 'logs/log_test'
@@ -135,7 +135,7 @@ class Experiment:
                                                 random_prob=self.test_random_prob, write_summary=False,
                                                 write_predictions=False, test_dataset=test_dataset)
                 if 'save_video' in args and args['save_video'] is not None:
-                    videofile = args['save_video'] + '.%s.ckpt-%d.mp4' % (test_dataset, step)
+                    videofile = 'out.%s.ckpt-%d.mp4' % (test_dataset, step)
                     print('Writing video to ' + videofile + ' ...')
                     self.test_experience.write_video(videofile, start_index=0, end_index=num_steps)
         else:
