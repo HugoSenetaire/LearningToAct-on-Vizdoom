@@ -38,6 +38,9 @@ class ExperienceMemory:
         self.data_specs = {
             'color': {'type': np.uint8, 'shape': (multi_simulator.num_channels, multi_simulator.resolution[1], multi_simulator.resolution[0])},
             'depth': {'type': np.float32, 'shape': (1, multi_simulator.resolution[1], multi_simulator.resolution[0])},
+            'segEnnemies': {"type": np.float32,'shape': (1, multi_simulator.resolution[1], multi_simulator.resolution[0])},
+            'segMedkit': {"type": np.float32,'shape': (1, multi_simulator.resolution[1], multi_simulator.resolution[0])},
+            'segClip': {"type": np.float32,'shape': (1, multi_simulator.resolution[1], multi_simulator.resolution[0])},
             'measurements': {'type': np.float32, 'shape': (multi_simulator.num_meas,)},
             'force': {'type': np.float32, 'shape': (4,1)},   # TODO parameterize
             'audiopath': {'type': np.float32, 'shape': (8,1)},  # TODO parameterize
@@ -59,6 +62,9 @@ class ExperienceMemory:
         self.state_sensory_shapes = {
             'color': self.data_specs['color']['shape'][1:] + (self.history_lengths['color']*self.data_specs['color']['shape'][0],),
             'depth': self.data_specs['depth']['shape'][1:] + (self.history_lengths['depth']*self.data_specs['depth']['shape'][0],),
+            'segEnnemies': self.data_specs['segEnnemies']['shape'][1:] + (self.history_lengths['segEnnemies']*self.data_specs['segEnnemies']['shape'][0],),
+            'segMedkit': self.data_specs['segMedkit']['shape'][1:] + (self.history_lengths['segMedkit']*self.data_specs['segMedkit']['shape'][0],),
+            'segClip': self.data_specs['segClip']['shape'][1:] + (self.history_lengths['segClip']*self.data_specs['segClip']['shape'][0],),
             'measurements': (self.history_lengths['measurements']*self.data_specs['measurements']['shape'][0],),
             'force': (self.history_lengths['force']*self.data_specs['force']['shape'][0],),
             'audiopath': (self.history_lengths['audiopath']*self.data_specs['audiopath']['shape'][0],),
@@ -114,7 +120,7 @@ class ExperienceMemory:
 
         return terminals
 
-    def add_step(self, multi_simulator, acts = None, objs=None, preds=None):
+    def add_step(self, multi_simulator, acts = None, objs=None, preds=None,need_seg = False):
         if acts == None:
             acts = multi_simulator.get_random_actions()
         data_to_add = multi_simulator.step(acts)
@@ -123,9 +129,36 @@ class ExperienceMemory:
             data_to_add['objectives'] = objs
         if not (preds is None):
             data_to_add['predictions'] = preds
-        return self.add(data_to_add)
+        
+        # USE THE LINE BELOW TO MAKE SURE WE GET PROPER IMAGES FOR SEGMENTATION
+        if need_seg :
+            nbSegEnnemies = 0
+            nbSegMedikit = 0
+            nbSegClip = 0
+            for i in range(len(multi_simulator.simulators)):
+                
+                if np.sum(data_to_add["segEnnemies"][i])>0:
+                    # import matplotlib.pyplot as plt
+                    # plt.figure(1)
+                    # plt.imshow(data_to_add["segEnnemies"][i].reshape(64,64))
+                    # plt.figure(2)
+                    # plt.imshow(data_to_add["color"][i].reshape(64,64))
+                    # plt.show()
+                    # assert(1==0)
+                    nbSegEnnemies+=1
+                if np.sum(data_to_add["segMedkit"][i])>0:
+                    nbSegMedikit+=1
+                if np.sum(data_to_add["segClip"][i])>0:
+                    nbSegClip+=1
+            if float(nbSegEnnemies)/len(multi_simulator.simulators)>0.5 or \
+             float(nbSegMedikit)/len(multi_simulator.simulators)>0.5 or \
+             float(nbSegClip)/len(multi_simulator.simulators)>0.5 :
+                return self.add(data_to_add)
+            return False
+        else :
+            return self.add(data_to_add)
 
-    def add_n_steps_with_actor(self, multi_simulator, num_steps, actor, verbose=False, write_predictions=False, write_logs = False, global_step=0):
+    def add_n_steps_with_actor(self, multi_simulator, num_steps, actor, verbose=False, write_predictions=False, write_logs = False, global_step=0,need_seg = False):
         if write_predictions and not ('predictions' in self._data):
             self._data['predictions'] = my_util.make_array(shape=(self.capacity,) + actor.predictions_shape, dtype=np.float32, shared=self.shared, fill_val=0.)
         if verbose or write_logs:
@@ -157,52 +190,106 @@ class ExperienceMemory:
                           ' '.join([('{' + str(n+4+meas_dim) + '}') for n in range(meas_dim)]) + '\n'
         # start_time = time.time()
         # import tqdm
-        for ns in range(int(num_steps)):
-            if verbose and time.time() - start_time > 1:
-                print('%d/%d' % (ns, num_steps))
-                start_time = time.time()
-            
-            curr_act = actor.act_with_multi_memory(self)
+        if need_seg :
+            ns = 0
+            while ns< num_steps:
+                if verbose and time.time() - start_time > 1:
+                    print('%d/%d' % (ns, num_steps))
+                    start_time = time.time()
+                curr_act = actor.act_with_multi_memory(self)
 
-            # actor has to return a np array of bools
-            invalid_states = np.logical_not(np.array(self.curr_states_with_valid_history()))
+                # actor has to return a np array of bools
+                invalid_states = np.logical_not(np.array(self.curr_states_with_valid_history()))
+    
+                #print(invalid_states)
+                #print(actor.random_objective_coeffs)
+                if actor.random_objective_coeffs:
+                    actor.reset_objective_coeffs(np.where(invalid_states)[0].tolist())
+                curr_act[invalid_states] = actor.random_actions(np.sum(invalid_states)) #np.array(multi_simulator.get_random_actions())[invalid_states]
+
+                if write_predictions:
+                    aux = self.add_step(multi_simulator, acts=curr_act.tolist(), objs=actor.objectives_to_write(), preds=actor.curr_predictions,need_seg =need_seg)
+                else:
+                    aux = self.add_step(multi_simulator, acts=curr_act.tolist(), objs=actor.objectives_to_write(),need_seg = need_seg)
+                
+                # If we add a value, it's ok, we continue:
+                if aux is not False:
+                    ns+=1
+                
+                if write_logs:
+                    last_indices = np.array(self.get_last_indices())
+                    last_rewards = self._data['rewards'][last_indices]
+                    prev_meas = last_meas
+                    last_meas = self._data['measurements'][last_indices]
+                    last_terminals = self._data['terminals'][last_indices]
+                    accum_rewards += last_rewards
+                    accum_meas += last_meas
+                    num_episode_steps = num_episode_steps + 1
+                    terminated_simulators = list(np.where(last_terminals)[0])
+                    for ns2 in terminated_simulators:
+                        num_episodes += 1
+                        episode_time = time.time() - start_times[ns2]
+                        avg_meas = accum_meas[ns2]/float(num_episode_steps[ns2])
+                        total_avg_meas += avg_meas
+                        total_final_meas += prev_meas[ns2]
+                        total_accum_reward += accum_rewards[ns2]
+                        start_times[ns2] = time.time()
+                        log_detailed.write(log_detailed_format.format(*([num_episodes, num_episode_steps[ns2], episode_time, accum_rewards[ns2]] + list(prev_meas[ns2]) + list(avg_meas))))
+                        accum_meas[ns2] = 0
+                        accum_rewards[ns2] = 0
+                        num_episode_steps[ns2] = 0
+                        start_times[ns2] = time.time()
+        else :
+            for ns in range(int(num_steps)):
  
-            #print(invalid_states)
-            #print(actor.random_objective_coeffs)
-            if actor.random_objective_coeffs:
-                actor.reset_objective_coeffs(np.where(invalid_states)[0].tolist())
-            curr_act[invalid_states] = actor.random_actions(np.sum(invalid_states)) #np.array(multi_simulator.get_random_actions())[invalid_states]
+                if verbose and time.time() - start_time > 1:
+                    print('%d/%d' % (ns, num_steps))
+                    start_time = time.time()
 
-            if write_predictions:
-                self.add_step(multi_simulator, acts=curr_act.tolist(), objs=actor.objectives_to_write(), preds=actor.curr_predictions)
-            else:
-                self.add_step(multi_simulator, acts=curr_act.tolist(), objs=actor.objectives_to_write())
+                curr_act = actor.act_with_multi_memory(self)
 
-            if write_logs:
-                last_indices = np.array(self.get_last_indices())
-                last_rewards = self._data['rewards'][last_indices]
-                prev_meas = last_meas
-                last_meas = self._data['measurements'][last_indices]
-                last_terminals = self._data['terminals'][last_indices]
-                accum_rewards += last_rewards
-                accum_meas += last_meas
-                num_episode_steps = num_episode_steps + 1
-                #print(last_terminals)
-                #print(num_episode_steps)
-                terminated_simulators = list(np.where(last_terminals)[0])
-                for ns in terminated_simulators:
-                    num_episodes += 1
-                    episode_time = time.time() - start_times[ns]
-                    avg_meas = accum_meas[ns]/float(num_episode_steps[ns])
-                    total_avg_meas += avg_meas
-                    total_final_meas += prev_meas[ns]
-                    total_accum_reward += accum_rewards[ns]
-                    start_times[ns] = time.time()
-                    log_detailed.write(log_detailed_format.format(*([num_episodes, num_episode_steps[ns], episode_time, accum_rewards[ns]] + list(prev_meas[ns]) + list(avg_meas))))
-                    accum_meas[ns] = 0
-                    accum_rewards[ns] = 0
-                    num_episode_steps[ns] = 0
-                    start_times[ns] = time.time()
+                # actor has to return a np array of bools
+                invalid_states = np.logical_not(np.array(self.curr_states_with_valid_history()))
+    
+                #print(invalid_states)
+                #print(actor.random_objective_coeffs)
+                if actor.random_objective_coeffs:
+                    actor.reset_objective_coeffs(np.where(invalid_states)[0].tolist())
+                curr_act[invalid_states] = actor.random_actions(np.sum(invalid_states)) #np.array(multi_simulator.get_random_actions())[invalid_states]
+
+                if write_predictions:
+                    self.add_step(multi_simulator, acts=curr_act.tolist(), objs=actor.objectives_to_write(), preds=actor.curr_predictions,need_seg =False)
+                else:
+                    self.add_step(multi_simulator, acts=curr_act.tolist(), objs=actor.objectives_to_write(),need_seg = False)
+                
+                # If we add a value, it's ok, we continue:
+
+                
+                if write_logs:
+                    last_indices = np.array(self.get_last_indices())
+                    last_rewards = self._data['rewards'][last_indices]
+                    prev_meas = last_meas
+                    last_meas = self._data['measurements'][last_indices]
+                    last_terminals = self._data['terminals'][last_indices]
+                    accum_rewards += last_rewards
+                    accum_meas += last_meas
+                    num_episode_steps = num_episode_steps + 1
+                    #print(last_terminals)
+                    #print(num_episode_steps)
+                    terminated_simulators = list(np.where(last_terminals)[0])
+                    for ns2 in terminated_simulators:
+                        num_episodes += 1
+                        episode_time = time.time() - start_times[ns2]
+                        avg_meas = accum_meas[ns2]/float(num_episode_steps[ns2])
+                        total_avg_meas += avg_meas
+                        total_final_meas += prev_meas[ns2]
+                        total_accum_reward += accum_rewards[ns2]
+                        start_times[ns2] = time.time()
+                        log_detailed.write(log_detailed_format.format(*([num_episodes, num_episode_steps[ns2], episode_time, accum_rewards[ns2]] + list(prev_meas[ns2]) + list(avg_meas))))
+                        accum_meas[ns2] = 0
+                        accum_rewards[ns2] = 0
+                        num_episode_steps[ns2] = 0
+                        start_times[ns2] = time.time()
         if write_logs:
             if num_episodes == 0:
                 num_episodes = 1
@@ -246,7 +333,20 @@ class ExperienceMemory:
             for (ni,index) in enumerate(indices):
                 frame_slice = np.arange(int(index) - history_length*self.history_step + 1, (int(index) + 1), self.history_step) % self.capacity
                 frames[ni*history_length:(ni+1)*history_length] = frame_slice
-            
+
+
+            if modality == 'segEnnemies':
+                reshape_size = (self.state_sensory_shapes['segEnnemies'][2],) + self.state_sensory_shapes['segEnnemies'][:2]
+                states['segEnnemies'] = np.transpose(np.reshape(np.take(self._data['segEnnemies'], frames, axis=0),
+                                                           (len(indices),) + reshape_size), [0,2,3,1]).astype(np.float32)
+            if modality == 'segMedkit':
+                reshape_size = (self.state_sensory_shapes['segMedkit'][2],) + self.state_sensory_shapes['segMedkit'][:2]
+                states['segMedkit'] = np.transpose(np.reshape(np.take(self._data['segMedkit'], frames, axis=0),
+                                                           (len(indices),) + reshape_size), [0,2,3,1]).astype(np.float32)
+            if modality == 'segClip':
+                reshape_size = (self.state_sensory_shapes['segClip'][2],) + self.state_sensory_shapes['segClip'][:2]
+                states['segClip'] = np.transpose(np.reshape(np.take(self._data['segClip'], frames, axis=0),
+                                                           (len(indices),) + reshape_size), [0,2,3,1]).astype(np.float32)
             if modality == 'color':
                 reshape_size = (self.state_sensory_shapes['color'][2],) + self.state_sensory_shapes['color'][:2]
                 states['color'] = np.transpose(np.reshape(np.take(self._data['color'], frames, axis=0),

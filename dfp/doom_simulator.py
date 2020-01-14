@@ -5,7 +5,7 @@ import scipy
 import sys
 import vizdoom
 import cv2
-
+import copy
 import numpy as np
 
 
@@ -85,8 +85,58 @@ class DoomSimulator:
             self._game.close()
             self.game_initialized = False
 
-    def getId(self,labels,output):
-        return True
+    def getId(self,state,output):
+        import matplotlib.pyplot as plt
+        if self._game.is_episode_finished() or self._game.is_player_dead():
+            return np.zeros((1,self.resolution[0],self.resolution[1]))
+        if state == None:
+            return np.zeros((1,self.resolution[0],self.resolution[1]))
+        index = []
+        segmentation = copy.deepcopy(state.labels_buffer)
+        for l in state.labels:
+            if l.object_name== output:
+                index.append(l.value)
+        # FOUND = False
+        if len(index)>1:
+            # FOUND = True
+            # plt.imshow(state.screen_buffer.reshape(120,160))
+            # plt.show()
+            for i in range(1,len(index)):
+                segmentation = np.where(segmentation==index[i],np.ones(np.shape(segmentation))*index[0],segmentation)
+        
+        if len(index)>0:
+            segmentation = np.where(segmentation==index[0],255.,0.)
+
+            # if FOUND :
+            #     plt.imshow(segmentation)
+            #     plt.show()
+            
+        else :
+            segmentation = np.zeros(np.shape(segmentation))
+
+        if self.resize:
+            # print("SEGMENTATION SHAPE",segmentation.shape)
+            segmentation=np.around(cv2.resize(segmentation, (self.resolution[0], self.resolution[1]))[None,:,:])
+            segmentation = np.where(segmentation>10.,1,0)
+            # if FOUND:
+            #     plt.imshow(segmentation.reshape((64,64)))
+            #     plt.show()
+            # if FOUND :
+            #     import matplotlib.pyplot as plt
+            #     print(state.screen_buffer.shape)
+            #     print(output)
+            #     plt.figure(1)
+            #     plt.imshow(state.screen_buffer.reshape(120,160))
+            #     plt.figure(2)
+            #     plt.imshow(state.labels_buffer.reshape(120,160))
+            #     plt.figure(3)
+            #     plt.imshow(segmentationAux.reshape(120,160))
+            #     plt.figure(4)
+            #     plt.imshow(segmentation.reshape(64,64))
+            #     plt.show()
+            #     assert(1==0)
+
+        return segmentation
 
 
     def step(self, action=0):
@@ -182,8 +232,31 @@ class DoomSimulator:
                 data_out[outp] = term
             if outp == 'depth':
                 data_out[outp] = depth
-            # if outp == 'segEnnemies':
-                # data_out[outp] = 
+            if outp == 'segEnnemies':
+                # print("outp")
+                # found = False
+                # for l in state.labels:
+                #     if l.object_name=="DoomImp":
+                #         found =True
+                #     print(l.object_name,l.value)
+                data_out[outp] = self.getId(state,"DoomImp")
+                # print(data_out[outp].shape)
+                # print(set(list(data_out[outp].flatten())))
+                # print(np.sum(np.where(data_out[outp]==1,1,0)))
+                # if found :
+                #     assert(1==0)
+                
+
+            if outp == 'segMedkit':
+                # print("outp")
+                # for l in state.labels:
+                    # print(l.object_name,l.value)
+                data_out[outp] = self.getId(state,"CustomMedikit")
+                # print(data_out[outp].shape)
+                # print(data_out[outp])
+            if outp == 'segClip':
+                data_out[outp] = self.getId(state,"Clip")
+        
             
         return data_out
 

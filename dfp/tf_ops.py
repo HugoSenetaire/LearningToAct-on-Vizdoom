@@ -184,18 +184,16 @@ def conv_decoder(data,layers_encoder, params, name, msra_coeff=1):
     return layers[-1]
 
 def UNET(data,params,name,msra_coeff=1):
-    outputEncoded = conv_encoder_aux(data, params, 'encoder', msra_coeff=msra_coeff)
-
+    outputEncoded = conv_encoder_aux(data, params,name+'encoder', msra_coeff=msra_coeff)
     dataAux = conv2d(outputEncoded[-1], 32, 
         k_h=2, k_w=2, d_h=2, d_w=2, msra_coeff=msra_coeff,
-        name="conv2dAUX")
-    outputDecoded = conv_decoder(dataAux,outputEncoded,params,"decoder", msra_coeff=msra_coeff)
+        name=name+"conv2dAUX")
+    outputDecoded = conv_decoder(dataAux,outputEncoded,params,name+"decoder", msra_coeff=msra_coeff)
     ####MODIFY TO GET PARAMETERS INSIDE :
     outputDecoded = lrelu(conv2d_transpose(outputDecoded, 1, \
                 k_h=2, k_w=2, \
-                 d_h=1, d_w=1, \
-                  name="OUTPUT", msra_coeff=msra_coeff))
-
+                 d_h=2, d_w=2, \
+                  name=name+"OUTPUT", msra_coeff=msra_coeff))
     return outputDecoded
 
 

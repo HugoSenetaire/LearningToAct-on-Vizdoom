@@ -10,6 +10,7 @@ import numpy as np
 import tensorflow as tf
 
 
+
 class Agent:
     def __init__(self, sess, args):
         '''Agent - powered by neural nets, can infer, act, train, test.
@@ -33,6 +34,7 @@ class Agent:
         self.onehot_actions_only = args['onehot_actions_only']
         self.test_random_policy_before_training = args['test_random_policy_before_training']
         self.prepare_controls_and_actions()
+        
 
         # preprocessing
         self.preprocess_sensory = args['preprocess_sensory']
@@ -70,6 +72,10 @@ class Agent:
         self.goalroomtype_fc_params = args['goalroomtype_fc_params']
         #self.valadv_fc_params = args['valadv_fc_params']
         self.weight_decay = args['weight_decay']
+        self.unet_params = args['unet_params'] 
+        self.segEnnemies_fc_params = args['segEnnemies_fc_params']
+        self.segMedkit_fc_params = args['segMedkit_fc_params']
+        self.segClip_fc_params = args['segClip_fc_params']
 
         # optimization parameters
         self.batch_size = args['batch_size']
@@ -81,6 +87,14 @@ class Agent:
         self.optimizer = args['optimizer']
         self.reset_iter_count = args['reset_iter_count']
         self.clip_gradient = args['clip_gradient']
+
+        # Training parameters 
+        self.start_learningtoact_training_iter = args['start_learningtoact_training_iter']
+        self.freezeType = args["freezeType"]
+        self.coefs_loss_value = args["coefs_loss"]
+        self.test_inference_every = args["test_inference_every"]
+        self.change_inference_dataset_every = args["change_inference_dataset_every"]
+        
 
         # directories
         self.checkpoint_dir = args['checkpoint_dir']
@@ -161,11 +175,12 @@ class Agent:
         raise NotImplementedError( "Agent should implement make_net" )
 
     def make_losses(self, infer_sensory, input_infer_sensory_preprocessed,
-                    pred_relevant, targets_preprocessed, objective_indices, objective_coeffs):
+                    pred_relevant, targets_preprocessed, objective_indices, objective_coeffs,coefs_loss):
         # makes the loss function
         raise NotImplementedError( "Agent should implement make_losses" )
 
     def build_model(self):
+        print("INSIDE Build MODEL")
         # For all modalities we care about, prepare some tensors + put them into input_sensory/input_sensory_preprocessed
         # NOTE: We will be using some of them as the actual observed input (self.input_modalities)
         #       and some of as inferred (self.infer_modalities) - e.g. to be predicted/inferred for this time step as well as future
@@ -178,6 +193,7 @@ class Agent:
         # input_targets are future prediction targets
         self.input_targets = tf.placeholder(tf.float32, [None, self.target_dim], name='input_targets')
         self.input_actions = tf.placeholder(tf.float32, [None, self.num_net_discrete_actions], name='input_actions')
+        self.coefs_loss = tf.placeholder(tf.float32,name = 'coefs_loss')
         self.input_objective_coeffs = tf.placeholder(tf.float32, [None] + list(self.obj_shape), name='input_objective_coeffs')
 
         if self.preprocess_input_targets:
@@ -195,7 +211,7 @@ class Agent:
         self.full_loss, self.errs_to_print, self.short_summary, self.detailed_summary = \
             self.make_losses(self.infer_sensory, self.input_sensory_preprocessed,
                              self.pred_relevant, self.input_targets_preprocessed,
-                             self.objective_indices, self.objective_coeffs)
+                             self.objective_indices, self.objective_coeffs,self.coefs_loss)
 
         # make the saver, lr and param summaries
         self.saver = tf.train.Saver(max_to_keep=0)
@@ -311,7 +327,7 @@ class Agent:
     def get_actor(self, objective_coeffs=None, random_prob=1., random_objective_coeffs=False):
         return Agent.Actor(self, objective_coeffs, random_prob, random_objective_coeffs)
 
-    def train_one_batch(self, experience):
+    def train_one_batch(self, experience, train_learning_to_act = True):
         # Fetch batch of states (with sensory input), rewards, terminal signals, actions, prediction targets,
         #   and objective coefficents from experience
         # These are all populated during experience_memory.add_step
@@ -322,29 +338,38 @@ class Agent:
         #print(terms[has_term])
 
         # Populate inputs - sensory inputs, actions, and targets to predict
+        # If training learning to act, need indexCoef = 1 else need indexCoef = 0
+        if train_learning_to_act :
+            indexCoef = 1
+        else :
+            indexCoef = 0
+
         feed_dict = {self.input_sensory[m]: states[m] for m in self.modalities}
-        feed_dict.update({self.input_targets: targs, self.input_actions: acts, self.input_objective_coeffs: objs})
-        res = self.sess.run([self.tf_minim, self.short_summary, self.detailed_summary] + self.errs_to_print, \
+        feed_dict.update({self.input_targets: targs, self.input_actions: acts, self.input_objective_coeffs: objs,self.coefs_loss : self.coefs_loss_value[indexCoef]})
+        res = self.sess.run([self.tf_minim, self.short_summary,self.coefs_loss, self.detailed_summary] + self.errs_to_print, \
                             feed_dict=feed_dict)
 
         curr_short_summary = res[1]
-        curr_detailed_summary = res[2]
-        curr_errs = res[3:]
-
+        curr_detailed_summary = res[3]
+        curr_errs = res[4:]
+        currCoef = res[2]
+  
         if np.mod(self.curr_step, self.print_err_every) == 0:
             print(time.strftime("[%Y/%m/%d %H:%M:%S] ") + "[Batch %4d] time: %4.4f, losses: " \
                 % (self.curr_step,  time.time() - self.prev_time), curr_errs)
+            print("CURRENT COEF : ", currCoef)
             self.prev_time = time.time()
             self.writer.add_summary(curr_short_summary, self.curr_step)
 
-        if np.mod(self.curr_step, self.detailed_summary_every) == 0:
-            self.writer.add_summary(curr_detailed_summary, self.curr_step)
+        # if np.mod(self.curr_step, self.detailed_summary_every) == 0:
+            # self.writer.add_summary(curr_detailed_summary, self.curr_step)
 
-        if self.save_param_histograms_every and np.mod(self.curr_step, self.save_param_histograms_every) == 0:
-            feed_dict = {self.input_sensory[m]: states[m] for m in self.modalities}
-            feed_dict.update({self.input_targets: targs, self.input_actions: acts, self.input_objective_coeffs: objs})
-            summary_string = self.sess.run(self.param_summary, feed_dict=feed_dict)
-            self.writer.add_summary(summary_string, self.curr_step)
+        # Save les paramètres en input 
+        # if self.save_param_histograms_every and np.mod(self.curr_step, self.save_param_histograms_every) == 0:
+        #     feed_dict = {self.input_sensory[m]: states[m] for m in self.modalities}
+        #     feed_dict.update({self.input_targets: targs, self.input_actions: acts, self.input_objective_coeffs: objs})
+        #     summary_string = self.sess.run(self.param_summary, feed_dict=feed_dict)
+        #     self.writer.add_summary(summary_string, self.curr_step)
 
         self.curr_step += 1
 
@@ -358,6 +383,8 @@ class Agent:
                 print('Could not load a model from', self.init_model)
         else:
             print('No model to load')
+
+
         if not os.path.exists(self.checkpoint_dir):
             os.makedirs(self.checkpoint_dir)
         if not os.path.exists(os.path.join(self.log_dir, self.model_dir)):
@@ -368,7 +395,42 @@ class Agent:
 
         self.train_actor = self.get_actor(objective_coeffs=self.objective_coeffs,
                                           random_prob=self.random_exploration_schedule(self.curr_step),random_objective_coeffs=self.random_objective_coeffs)
+        
 
+
+        print("==========================")
+        print("Training without learning to act")
+        print("==========================")
+        ##=============== Training without learning to act =====================
+        print('Filling the training memory')
+        if self.start_learningtoact_training_iter>0 and len(self.infer_modalities)>0:
+            experience.add_n_steps_with_actor(simulator,
+                                            experience.capacity / simulator.num_simulators,
+                                            self.train_actor, verbose=True, need_seg =True)
+            print('Training for %d with testing every %d, test_random_prob=%f'
+                % (self.start_learningtoact_training_iter, self.test_inference_every, test_random_prob))
+            for _ in range(self.start_learningtoact_training_iter):
+                # Utiliser les checkpoints pour sauvegarder ?
+                # if np.mod(self.curr_step, self.checkpoint_every) == 0:
+                    # self.save(self.checkpoint_dir, self.curr_step)
+
+                self.train_one_batch(experience,train_learning_to_act = False)
+                
+                if self.test_inference_every and np.mod(self.curr_step, self.test_inference_every) == 0:
+                    self.test_inference(test_simulator, test_experience, self.objective_coeffs,
+                                    self.num_steps_per_policy_test)
+                
+                if np.mod(self.curr_step, self.change_inference_dataset_every) == 0:
+                    experience.add_n_steps_with_actor(simulator,
+                                                    experience.capacity / simulator.num_simulators,
+                                                    self.train_actor,need_seg = True)
+            
+        
+        ##=============================================== Training for learning to act ===============================
+        print("==========================")
+        print("STARTING LEARNING TO ACT")
+        print("==========================")
+        self.train_actor.random_prob = self.random_exploration_schedule(self.curr_step)
         print('Filling the training memory')
         experience.add_n_steps_with_actor(simulator,
                                           experience.capacity / simulator.num_simulators,
@@ -390,13 +452,90 @@ class Agent:
                 self.test_policy(test_simulator, test_experience, self.objective_coeffs,
                                  self.num_steps_per_policy_test, random_prob=test_random_prob, write_summary=True,
                                  write_predictions=False, test_dataset=test_dataset)
+                if len(self.infer_modalities)>0:
+                    self.get_segmentation(test_simulator,experience,self.objective_coeffs,self.curr_step)
 
             self.train_one_batch(experience)
+            
             if np.mod(self.curr_step, self.add_experiences_every) == 0:
+                
                 self.train_actor.random_prob = self.random_exploration_schedule(self.curr_step)
                 experience.add_n_steps_with_actor(simulator,
                                                 self.new_memories_per_batch,
                                                 self.train_actor)
+
+    def test_inference(self, simulator,experience,objective_coeffs, num_steps):
+        """ Use an actor with random prob to get random exploration """
+        actor = self.get_actor(objective_coeffs=objective_coeffs, random_prob=1.0,
+                               random_objective_coeffs=False)
+        experience.add_n_steps_with_actor(simulator, num_steps, actor, verbose=True,
+                            write_predictions=False,
+                            write_logs=False, global_step=-1)
+
+        states, rwrds, terms, acts, targs, objs = experience.get_random_batch(self.batch_size, self.modalities)
+        acts = self.preprocess_actions(acts)
+        # Populate inputs - sensory inputs, actions, and targets to predict
+        feed_dict = {self.input_sensory[m]: states[m] for m in self.modalities}
+        feed_dict.update({self.input_targets: targs, self.input_actions: acts, self.input_objective_coeffs: objs,self.coefs_loss : self.coefs_loss_value[0],})
+        res = self.sess.run([self.tf_minim, self.short_summary, self.detailed_summary] + self.errs_to_print, \
+                            feed_dict=feed_dict)
+        print("Results for inference : ", res)
+
+    def get_segmentation(self,simulator,experience,objective_coeffs,curr_step):
+        if not os.path.exists("images"):
+            os.makedirs("images")
+        notFound=True
+        while notFound :
+            states, rwrds, terms, acts, targs, objs = experience.get_random_batch(1, self.modalities)
+            for m in self.infer_modalities:
+                if m!="depth" and np.sum(states[m])>0 :
+                    notFound = False
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+        
+        acts = self.preprocess_actions(acts)
+        # Populate inputs - sensory inputs, actions, and targets to predict
+        feed_dict = {self.input_sensory[m]: states[m] for m in self.modalities}
+        feed_dict.update({self.input_targets: targs, self.input_actions: acts, self.input_objective_coeffs: objs,self.coefs_loss : self.coefs_loss_value[0],})
+        res = self.sess.run([self.input_sensory,self.infer_sensory], \
+                            feed_dict=feed_dict)
+        
+        for m in self.infer_modalities:
+            imageTruth = res[0]["color"][0].reshape((64,64))
+            plt.imshow(imageTruth)
+            plt.savefig("images/trueImage{}.jpg".format(curr_step))
+            if m=="segEnnemies":
+                segmentationTruth = res[0][m][0].reshape((64,64))
+                plt.imshow(segmentationTruth)
+                plt.savefig("images/segEnnemiesTrue{}.jpg".format(curr_step))
+                segmentationValue = res[1][m][0].reshape((64,64))
+                plt.imshow(segmentationValue)
+                plt.savefig("images/segEnnemiesValue{}.jpg".format(curr_step))
+
+            if m=="segMedkit":
+                segmentationTruth = res[0][m][0].reshape((64,64))
+                plt.imshow(segmentationTruth)
+                plt.savefig("images/segMedkitTrue{}.jpg".format(curr_step))
+                segmentationValue = res[1][m][0].reshape((64,64))
+                plt.imshow(segmentationValue)
+                plt.savefig("images/segMedkitValue{}.jpg".format(curr_step))
+            
+            if m=="segClip":
+                segmentationTruth = res[0][m][0].reshape((64,64))
+                plt.imshow(segmentationTruth)
+                plt.savefig("images/segClipTrue{}.jpg".format(curr_step))
+                segmentationValue = res[1][m][0].reshape((64,64))
+                plt.imshow(segmentationValue)
+                plt.savefig("images/segClipValue{}.jpg".format(curr_step))
+
+            if m=="depth":
+                depthTruth = res[0][m][0].reshape((64,64))
+                plt.imshow(depthTruth)
+                plt.savefig("images/depthTruth{}.jpg".format(curr_step))
+                depthValue = res[1][m][0].reshape((64,64))
+                plt.imshow(depthValue)
+                plt.savefig("images/depthValue{}.jpg".format(curr_step))
 
     def test_policy(self, simulator, experience, objective_coeffs, num_steps, random_prob,
                     write_summary=False, write_predictions=False, test_dataset='val'):
