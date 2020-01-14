@@ -76,6 +76,7 @@ class Agent:
         self.segEnnemies_fc_params = args['segEnnemies_fc_params']
         self.segMedkit_fc_params = args['segMedkit_fc_params']
         self.segClip_fc_params = args['segClip_fc_params']
+        self.depth_fc_params = args["depth_fc_params"]
 
         # optimization parameters
         self.batch_size = args['batch_size']
@@ -458,11 +459,12 @@ class Agent:
             self.train_one_batch(experience)
             
             if np.mod(self.curr_step, self.add_experiences_every) == 0:
-                
+       
                 self.train_actor.random_prob = self.random_exploration_schedule(self.curr_step)
                 experience.add_n_steps_with_actor(simulator,
                                                 self.new_memories_per_batch,
                                                 self.train_actor)
+                
 
     def test_inference(self, simulator,experience,objective_coeffs, num_steps):
         """ Use an actor with random prob to get random exploration """
@@ -487,6 +489,8 @@ class Agent:
         notFound=True
         while notFound :
             states, rwrds, terms, acts, targs, objs = experience.get_random_batch(1, self.modalities)
+            if len(self.infer_modalities)==1 and self.infer_modalities[0]=="depth":            
+                notFound = False
             for m in self.infer_modalities:
                 if m!="depth" and np.sum(states[m])>0 :
                     notFound = False
@@ -548,7 +552,7 @@ class Agent:
 
         if test_dataset == 'train':  # just take n training steps
             # NOTE: assumes num_steps * num_simulators == memory_capacity (for average meas below to be correct)
-            experience.add_n_steps_with_actor(simulator, num_steps, actor, verbose=True,
+            experience.add_n_steps_with_actor(simulator, 50000, actor, verbose=True,
                                               write_predictions=write_predictions,
                                               write_logs=True, global_step=self.curr_step * self.batch_size)
             total_steps = num_steps * simulator.num_simulators
