@@ -36,12 +36,12 @@ targ_scale_coeffs = np.expand_dims((np.expand_dims(np.array([7.5,30.,1.]),1) * n
                                     # * np.ones((1, len(target_maker_args['future_steps'])))).flatten(), 0)
 
 agent_args = {
-    'modalities': ['color', 'measurements', 'depth', "segEnnemies", "segMedkit"],
+    'modalities': ['color', 'measurements', "segEnnemies", "segMedkit"],
     'preprocess_input_targets': lambda x: x / targ_scale_coeffs,
     'postprocess_predictions': lambda x: x * targ_scale_coeffs,
     'objective_coeffs_meas': np.array([1, 0.5, 0.5]),
     'infer_modalities': ["segEnnemies","segMedkit"],
-    'start_learningtoact_training_iter' : 10000,
+    'start_learningtoact_training_iter' : 0,
     'freezeType' : "None" ,
     #Possibility are "None" : No Freeze; "Partial" : Only the end is trained; "All": Everything freezed 
     # 'coefs_loss' : [(0.,1.0),(0.8,0.2)], # coefs_loss[0] = (target_loss,infer_loss) before training learning to act

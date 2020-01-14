@@ -136,6 +136,13 @@ class ExperienceMemory:
                 if data_to_add["segEnnemies"][i] is None or data_to_add["segMedkit"][i] is None :
                     continue
                 if np.sum(data_to_add["segEnnemies"][i])>0:
+                    # import matplotlib.pyplot as plt
+                    # plt.figure(1)
+                    # plt.imshow(data_to_add["segEnnemies"][i].reshape(64,64))
+                    # plt.figure(2)
+                    # plt.imshow(data_to_add["color"][i].reshape(64,64))
+                    # plt.show()
+                    # assert(1==0)
                     nbSegEnnemies+=1
                 if np.sum(data_to_add["segMedkit"][i])>0:
                     nbSegMedikit+=1

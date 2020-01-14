@@ -97,14 +97,33 @@ class DoomSimulator:
         if len(index)>1:
             for i in range(1,len(index)):
                 np.where(segmentation==index[i],np.ones(np.shape(segmentation))*index[0],segmentation)
-
+        FOUND = False
         if len(index)>0:
-            segmentation = np.where(segmentation==index[0],1.,0.)
+            segmentation = np.where(segmentation==index[0],255.,0.)
+            segmentationAux = copy.deepcopy(segmentation)
+            FOUND = True
+            
         else :
             segmentation = np.zeros(np.shape(segmentation))
 
         if self.resize:
+            # print("SEGMENTATION SHAPE",segmentation.shape)
             segmentation=np.around(cv2.resize(segmentation, (self.resolution[0], self.resolution[1]))[None,:,:])
+            segmentation = np.where(segmentation>10.,1,0)
+            # if FOUND :
+            #     import matplotlib.pyplot as plt
+            #     print(state.screen_buffer.shape)
+            #     print(output)
+            #     plt.figure(1)
+            #     plt.imshow(state.screen_buffer.reshape(120,160))
+            #     plt.figure(2)
+            #     plt.imshow(state.labels_buffer.reshape(120,160))
+            #     plt.figure(3)
+            #     plt.imshow(segmentationAux.reshape(120,160))
+            #     plt.figure(4)
+            #     plt.imshow(segmentation.reshape(64,64))
+            #     plt.show()
+            #     assert(1==0)
 
         return segmentation
 
