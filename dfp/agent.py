@@ -10,6 +10,7 @@ import numpy as np
 import tensorflow as tf
 
 
+
 class Agent:
     def __init__(self, sess, args):
         '''Agent - powered by neural nets, can infer, act, train, test.
@@ -74,6 +75,7 @@ class Agent:
         self.unet_params = args['unet_params'] 
         self.segEnnemies_fc_params = args['segEnnemies_fc_params']
         self.segMedkit_fc_params = args['segMedkit_fc_params']
+        self.segClip_fc_params = args['segClip_fc_params']
 
         # optimization parameters
         self.batch_size = args['batch_size']
@@ -401,7 +403,7 @@ class Agent:
         print("==========================")
         ##=============== Training without learning to act =====================
         print('Filling the training memory')
-        if len(self.infer_modalities)>0:
+        if self.start_learningtoact_training_iter>0 and len(self.infer_modalities)>0:
             experience.add_n_steps_with_actor(simulator,
                                             experience.capacity / simulator.num_simulators,
                                             self.train_actor, verbose=True, need_seg =True)
@@ -450,11 +452,13 @@ class Agent:
                 self.test_policy(test_simulator, test_experience, self.objective_coeffs,
                                  self.num_steps_per_policy_test, random_prob=test_random_prob, write_summary=True,
                                  write_predictions=False, test_dataset=test_dataset)
+                if len(self.infer_modalities)>0:
+                    self.get_segmentation(test_simulator,experience,self.objective_coeffs,self.curr_step)
 
             self.train_one_batch(experience)
             
             if np.mod(self.curr_step, self.add_experiences_every) == 0:
-                self.get_segmentation(test_simulator,experience,self.objective_coeffs)
+                
                 self.train_actor.random_prob = self.random_exploration_schedule(self.curr_step)
                 experience.add_n_steps_with_actor(simulator,
                                                 self.new_memories_per_batch,
@@ -477,14 +481,18 @@ class Agent:
                             feed_dict=feed_dict)
         print("Results for inference : ", res)
 
-    def get_segmentation(self,simulator,experience,objective_coeffs):
-
+    def get_segmentation(self,simulator,experience,objective_coeffs,curr_step):
+        if not os.path.exists("images"):
+            os.makedirs("images")
         notFound=True
         while notFound :
             states, rwrds, terms, acts, targs, objs = experience.get_random_batch(1, self.modalities)
-            if(np.sum(states["segEnnemies"])>0 or np.sum(states["seg"])>0):
-                notFound = False
-        
+            for m in self.infer_modalities:
+                if m!="depth" and np.sum(states[m])>0 :
+                    notFound = False
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
         
         acts = self.preprocess_actions(acts)
         # Populate inputs - sensory inputs, actions, and targets to predict
@@ -493,28 +501,42 @@ class Agent:
         res = self.sess.run([self.input_sensory,self.infer_sensory], \
                             feed_dict=feed_dict)
         
-        for m in self.modalities:
+        for m in self.infer_modalities:
+            imageTruth = res[0]["color"][0].reshape((64,64))
+            plt.imshow(imageTruth)
+            plt.savefig("images/trueImage{}.jpg".format(curr_step))
             if m=="segEnnemies":
-                import matplotlib.pyplot as plt
-                imageTruth = res[0]["color"][0].reshape((64,64))
                 segmentationTruth = res[0][m][0].reshape((64,64))
+                plt.imshow(segmentationTruth)
+                plt.savefig("images/segEnnemiesTrue{}.jpg".format(curr_step))
                 segmentationValue = res[1][m][0].reshape((64,64))
-                # plt.figure(1)
-                # plt.imshow(segmentationTruth)
-                # plt.figure(2)
-                # plt.imshow(segmentationValue)
-                # plt.figure(3)
-                # plt.imshow(imageTruth)
-                # plt.show()
+                plt.imshow(segmentationValue)
+                plt.savefig("images/segEnnemiesValue{}.jpg".format(curr_step))
+
             if m=="segMedkit":
                 segmentationTruth = res[0][m][0].reshape((64,64))
+                plt.imshow(segmentationTruth)
+                plt.savefig("images/segMedkitTrue{}.jpg".format(curr_step))
                 segmentationValue = res[1][m][0].reshape((64,64))
-                # plt.figure(1)
-                # plt.imshow(segmentationTruth)
-                # plt.figure(2)
-                # plt.imshow(segmentationValue)
-                # plt.show()
-                
+                plt.imshow(segmentationValue)
+                plt.savefig("images/segMedkitValue{}.jpg".format(curr_step))
+            
+            if m=="segClip":
+                segmentationTruth = res[0][m][0].reshape((64,64))
+                plt.imshow(segmentationTruth)
+                plt.savefig("images/segClipTrue{}.jpg".format(curr_step))
+                segmentationValue = res[1][m][0].reshape((64,64))
+                plt.imshow(segmentationValue)
+                plt.savefig("images/segClipValue{}.jpg".format(curr_step))
+
+            if m=="depth":
+                depthTruth = res[0][m][0].reshape((64,64))
+                plt.imshow(depthTruth)
+                plt.savefig("images/depthTruth{}.jpg".format(curr_step))
+                depthValue = res[1][m][0].reshape((64,64))
+                plt.imshow(depthValue)
+                plt.savefig("images/depthValue{}.jpg".format(curr_step))
+
     def test_policy(self, simulator, experience, objective_coeffs, num_steps, random_prob,
                     write_summary=False, write_predictions=False, test_dataset='val'):
         print('== Testing the policy ==')

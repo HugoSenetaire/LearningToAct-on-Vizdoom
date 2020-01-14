@@ -49,6 +49,9 @@ class AgentMultimodalAdvantage(Agent):
             elif modality == 'segMedkit':
                 segMedkit_fc = my_ops.fc_net(my_ops.flatten(input_sensory['segMedkit']), self.segEnnemies_fc_params, 'segMedkit_fc', msra_coeff=0.9)
                 sensory_embeddings['segMedkit'] = segMedkit_fc
+            elif modality == 'segClip':
+                segClip_fc = my_ops.fc_net(my_ops.flatten(input_sensory['segClip']), self.segEnnemies_fc_params, 'segClip_fc', msra_coeff=0.9)
+                sensory_embeddings['segClip'] = segClip_fc
             elif modality == 'measurements':
                 meas_fc = my_ops.fc_net(input_sensory['measurements'], self.meas_fc_params, 'meas_fc', msra_coeff=0.9)
                 sensory_embeddings['measurements'] = meas_fc
@@ -97,6 +100,10 @@ class AgentMultimodalAdvantage(Agent):
                 segMedkit_UNET = my_ops.UNET(input_sensory['color'],self.unet_params,'UNETMedKit',msra_coeff=0.9)
                 sensory_embeddings[modality] =  my_ops.fc_net(my_ops.flatten(segMedkit_UNET), self.segEnnemies_fc_params, 'segMedkit_fc', msra_coeff=0.9)
                 infer_sensory_embeddings[modality] = segMedkit_UNET
+            elif modality == 'segClip' :
+                segClip_UNET = my_ops.UNET(input_sensory['color'],self.unet_params,'UNETClip',msra_coeff=0.9)
+                sensory_embeddings[modality] =  my_ops.fc_net(my_ops.flatten(segClip_UNET), self.segEnnemies_fc_params, 'segClip_fc', msra_coeff=0.9)
+                infer_sensory_embeddings[modality] = segClip_UNET
             else:
                 raise Exception('Unsupported infer modality %s' % modality)
 

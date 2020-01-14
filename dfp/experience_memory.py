@@ -40,6 +40,7 @@ class ExperienceMemory:
             'depth': {'type': np.float32, 'shape': (1, multi_simulator.resolution[1], multi_simulator.resolution[0])},
             'segEnnemies': {"type": np.float32,'shape': (1, multi_simulator.resolution[1], multi_simulator.resolution[0])},
             'segMedkit': {"type": np.float32,'shape': (1, multi_simulator.resolution[1], multi_simulator.resolution[0])},
+            'segClip': {"type": np.float32,'shape': (1, multi_simulator.resolution[1], multi_simulator.resolution[0])},
             'measurements': {'type': np.float32, 'shape': (multi_simulator.num_meas,)},
             'force': {'type': np.float32, 'shape': (4,1)},   # TODO parameterize
             'audiopath': {'type': np.float32, 'shape': (8,1)},  # TODO parameterize
@@ -63,6 +64,7 @@ class ExperienceMemory:
             'depth': self.data_specs['depth']['shape'][1:] + (self.history_lengths['depth']*self.data_specs['depth']['shape'][0],),
             'segEnnemies': self.data_specs['segEnnemies']['shape'][1:] + (self.history_lengths['segEnnemies']*self.data_specs['segEnnemies']['shape'][0],),
             'segMedkit': self.data_specs['segMedkit']['shape'][1:] + (self.history_lengths['segMedkit']*self.data_specs['segMedkit']['shape'][0],),
+            'segClip': self.data_specs['segClip']['shape'][1:] + (self.history_lengths['segClip']*self.data_specs['segClip']['shape'][0],),
             'measurements': (self.history_lengths['measurements']*self.data_specs['measurements']['shape'][0],),
             'force': (self.history_lengths['force']*self.data_specs['force']['shape'][0],),
             'audiopath': (self.history_lengths['audiopath']*self.data_specs['audiopath']['shape'][0],),
@@ -132,9 +134,9 @@ class ExperienceMemory:
         if need_seg :
             nbSegEnnemies = 0
             nbSegMedikit = 0
+            nbSegClip = 0
             for i in range(len(multi_simulator.simulators)):
-                if data_to_add["segEnnemies"][i] is None or data_to_add["segMedkit"][i] is None :
-                    continue
+                
                 if np.sum(data_to_add["segEnnemies"][i])>0:
                     # import matplotlib.pyplot as plt
                     # plt.figure(1)
@@ -146,8 +148,11 @@ class ExperienceMemory:
                     nbSegEnnemies+=1
                 if np.sum(data_to_add["segMedkit"][i])>0:
                     nbSegMedikit+=1
-            if float(nbSegEnnemies)/len(multi_simulator.simulators)>0.8 or \
-             float(nbSegMedikit)/len(multi_simulator.simulators)>0.8 :
+                if np.sum(data_to_add["segClip"][i])>0:
+                    nbSegClip+=1
+            if float(nbSegEnnemies)/len(multi_simulator.simulators)>0.5 or \
+             float(nbSegMedikit)/len(multi_simulator.simulators)>0.5 or \
+             float(nbSegClip)/len(multi_simulator.simulators)>0.5 :
                 return self.add(data_to_add)
             return False
         else :
@@ -220,22 +225,20 @@ class ExperienceMemory:
                     accum_rewards += last_rewards
                     accum_meas += last_meas
                     num_episode_steps = num_episode_steps + 1
-                    #print(last_terminals)
-                    #print(num_episode_steps)
                     terminated_simulators = list(np.where(last_terminals)[0])
-                    for ns in terminated_simulators:
+                    for ns2 in terminated_simulators:
                         num_episodes += 1
-                        episode_time = time.time() - start_times[ns]
-                        avg_meas = accum_meas[ns]/float(num_episode_steps[ns])
+                        episode_time = time.time() - start_times[ns2]
+                        avg_meas = accum_meas[ns2]/float(num_episode_steps[ns2])
                         total_avg_meas += avg_meas
-                        total_final_meas += prev_meas[ns]
-                        total_accum_reward += accum_rewards[ns]
-                        start_times[ns] = time.time()
-                        log_detailed.write(log_detailed_format.format(*([num_episodes, num_episode_steps[ns], episode_time, accum_rewards[ns]] + list(prev_meas[ns]) + list(avg_meas))))
-                        accum_meas[ns] = 0
-                        accum_rewards[ns] = 0
-                        num_episode_steps[ns] = 0
-                        start_times[ns] = time.time()
+                        total_final_meas += prev_meas[ns2]
+                        total_accum_reward += accum_rewards[ns2]
+                        start_times[ns2] = time.time()
+                        log_detailed.write(log_detailed_format.format(*([num_episodes, num_episode_steps[ns2], episode_time, accum_rewards[ns2]] + list(prev_meas[ns2]) + list(avg_meas))))
+                        accum_meas[ns2] = 0
+                        accum_rewards[ns2] = 0
+                        num_episode_steps[ns2] = 0
+                        start_times[ns2] = time.time()
         else :
             for ns in range(int(num_steps)):
  
@@ -274,19 +277,19 @@ class ExperienceMemory:
                     #print(last_terminals)
                     #print(num_episode_steps)
                     terminated_simulators = list(np.where(last_terminals)[0])
-                    for ns in terminated_simulators:
+                    for ns2 in terminated_simulators:
                         num_episodes += 1
-                        episode_time = time.time() - start_times[ns]
-                        avg_meas = accum_meas[ns]/float(num_episode_steps[ns])
+                        episode_time = time.time() - start_times[ns2]
+                        avg_meas = accum_meas[ns2]/float(num_episode_steps[ns2])
                         total_avg_meas += avg_meas
-                        total_final_meas += prev_meas[ns]
-                        total_accum_reward += accum_rewards[ns]
-                        start_times[ns] = time.time()
-                        log_detailed.write(log_detailed_format.format(*([num_episodes, num_episode_steps[ns], episode_time, accum_rewards[ns]] + list(prev_meas[ns]) + list(avg_meas))))
-                        accum_meas[ns] = 0
-                        accum_rewards[ns] = 0
-                        num_episode_steps[ns] = 0
-                        start_times[ns] = time.time()
+                        total_final_meas += prev_meas[ns2]
+                        total_accum_reward += accum_rewards[ns2]
+                        start_times[ns2] = time.time()
+                        log_detailed.write(log_detailed_format.format(*([num_episodes, num_episode_steps[ns2], episode_time, accum_rewards[ns2]] + list(prev_meas[ns2]) + list(avg_meas))))
+                        accum_meas[ns2] = 0
+                        accum_rewards[ns2] = 0
+                        num_episode_steps[ns2] = 0
+                        start_times[ns2] = time.time()
         if write_logs:
             if num_episodes == 0:
                 num_episodes = 1
@@ -339,6 +342,10 @@ class ExperienceMemory:
             if modality == 'segMedkit':
                 reshape_size = (self.state_sensory_shapes['segMedkit'][2],) + self.state_sensory_shapes['segMedkit'][:2]
                 states['segMedkit'] = np.transpose(np.reshape(np.take(self._data['segMedkit'], frames, axis=0),
+                                                           (len(indices),) + reshape_size), [0,2,3,1]).astype(np.float32)
+            if modality == 'segClip':
+                reshape_size = (self.state_sensory_shapes['segClip'][2],) + self.state_sensory_shapes['segClip'][:2]
+                states['segClip'] = np.transpose(np.reshape(np.take(self._data['segClip'], frames, axis=0),
                                                            (len(indices),) + reshape_size), [0,2,3,1]).astype(np.float32)
             if modality == 'color':
                 reshape_size = (self.state_sensory_shapes['color'][2],) + self.state_sensory_shapes['color'][:2]
