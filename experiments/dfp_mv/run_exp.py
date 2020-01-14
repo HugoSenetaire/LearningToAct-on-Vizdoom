@@ -20,7 +20,7 @@ simulator_args.update({
     "game_args" : "",
     "gpu": True,
     # i'm not sure why we use 8 simulators here
-    "num_simulators" : 1,
+    "num_simulators" : 8,
 })
 ## Simulator
 

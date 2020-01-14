@@ -168,6 +168,7 @@ class DoomSimulator:
             
             img = np.zeros((self.num_channels, self.resolution[1], self.resolution[0]), dtype=np.uint8)
             meas = np.zeros(self.num_meas, dtype=np.uint32) #TODO alternativly, vizdoom code has to be changed so that it doesn't output nan when an episode ends
+            depth = np.zeros((1, self.resolution[1], self.resolution[0]),dtype = np.uint8)
 
         data_out = {}
         for outp in self.outputs:
