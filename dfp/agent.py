@@ -401,27 +401,28 @@ class Agent:
         print("==========================")
         ##=============== Training without learning to act =====================
         print('Filling the training memory')
-        experience.add_n_steps_with_actor(simulator,
-                                          experience.capacity / simulator.num_simulators,
-                                          self.train_actor, verbose=True, need_seg =True)
-        print('Training for %d with testing every %d, test_random_prob=%f'
-              % (self.start_learningtoact_training_iter, self.test_inference_every, test_random_prob))
-        for _ in range(self.start_learningtoact_training_iter):
-            # Utiliser les checkpoints pour sauvegarder ?
-            # if np.mod(self.curr_step, self.checkpoint_every) == 0:
-                # self.save(self.checkpoint_dir, self.curr_step)
+        if len(self.infer_modalities)>0:
+            experience.add_n_steps_with_actor(simulator,
+                                            experience.capacity / simulator.num_simulators,
+                                            self.train_actor, verbose=True, need_seg =True)
+            print('Training for %d with testing every %d, test_random_prob=%f'
+                % (self.start_learningtoact_training_iter, self.test_inference_every, test_random_prob))
+            for _ in range(self.start_learningtoact_training_iter):
+                # Utiliser les checkpoints pour sauvegarder ?
+                # if np.mod(self.curr_step, self.checkpoint_every) == 0:
+                    # self.save(self.checkpoint_dir, self.curr_step)
 
-            self.train_one_batch(experience,train_learning_to_act = False)
+                self.train_one_batch(experience,train_learning_to_act = False)
+                
+                if self.test_inference_every and np.mod(self.curr_step, self.test_inference_every) == 0:
+                    self.test_inference(test_simulator, test_experience, self.objective_coeffs,
+                                    self.num_steps_per_policy_test)
+                
+                if np.mod(self.curr_step, self.change_inference_dataset_every) == 0:
+                    experience.add_n_steps_with_actor(simulator,
+                                                    experience.capacity / simulator.num_simulators,
+                                                    self.train_actor,need_seg = True)
             
-            if self.test_inference_every and np.mod(self.curr_step, self.test_inference_every) == 0:
-                self.test_inference(test_simulator, test_experience, self.objective_coeffs,
-                                 self.num_steps_per_policy_test)
-            
-            if np.mod(self.curr_step, self.change_inference_dataset_every) == 0:
-                experience.add_n_steps_with_actor(simulator,
-                                                experience.capacity / simulator.num_simulators,
-                                                self.train_actor,need_seg = True)
-        
         
         ##=============================================== Training for learning to act ===============================
         print("==========================")
@@ -451,7 +452,9 @@ class Agent:
                                  write_predictions=False, test_dataset=test_dataset)
 
             self.train_one_batch(experience)
+            
             if np.mod(self.curr_step, self.add_experiences_every) == 0:
+                self.get_segmentation(test_simulator,experience,self.objective_coeffs)
                 self.train_actor.random_prob = self.random_exploration_schedule(self.curr_step)
                 experience.add_n_steps_with_actor(simulator,
                                                 self.new_memories_per_batch,
@@ -474,8 +477,44 @@ class Agent:
                             feed_dict=feed_dict)
         print("Results for inference : ", res)
 
-        
+    def get_segmentation(self,simulator,experience,objective_coeffs):
 
+        notFound=True
+        while notFound :
+            states, rwrds, terms, acts, targs, objs = experience.get_random_batch(1, self.modalities)
+            if(np.sum(states["segEnnemies"])>0 or np.sum(states["seg"])>0):
+                notFound = False
+        
+        
+        acts = self.preprocess_actions(acts)
+        # Populate inputs - sensory inputs, actions, and targets to predict
+        feed_dict = {self.input_sensory[m]: states[m] for m in self.modalities}
+        feed_dict.update({self.input_targets: targs, self.input_actions: acts, self.input_objective_coeffs: objs,self.coefs_loss : self.coefs_loss_value[0],})
+        res = self.sess.run([self.input_sensory,self.infer_sensory], \
+                            feed_dict=feed_dict)
+        
+        for m in self.modalities:
+            if m=="segEnnemies":
+                import matplotlib.pyplot as plt
+                imageTruth = res[0]["color"][0].reshape((64,64))
+                segmentationTruth = res[0][m][0].reshape((64,64))
+                segmentationValue = res[1][m][0].reshape((64,64))
+                # plt.figure(1)
+                # plt.imshow(segmentationTruth)
+                # plt.figure(2)
+                # plt.imshow(segmentationValue)
+                # plt.figure(3)
+                # plt.imshow(imageTruth)
+                # plt.show()
+            if m=="segMedkit":
+                segmentationTruth = res[0][m][0].reshape((64,64))
+                segmentationValue = res[1][m][0].reshape((64,64))
+                # plt.figure(1)
+                # plt.imshow(segmentationTruth)
+                # plt.figure(2)
+                # plt.imshow(segmentationValue)
+                # plt.show()
+                
     def test_policy(self, simulator, experience, objective_coeffs, num_steps, random_prob,
                     write_summary=False, write_predictions=False, test_dataset='val'):
         print('== Testing the policy ==')
