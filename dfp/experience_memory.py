@@ -185,57 +185,110 @@ class ExperienceMemory:
                           ' '.join([('{' + str(n+4+meas_dim) + '}') for n in range(meas_dim)]) + '\n'
         # start_time = time.time()
         # import tqdm
-        ns = 0
-        while ns< num_steps:
-            if verbose and time.time() - start_time > 1:
-                print('%d/%d' % (ns, num_steps))
-                start_time = time.time()
-            
-            curr_act = actor.act_with_multi_memory(self)
+        if need_seg :
+            ns = 0
+            while ns< num_steps:
+                print("IN",ns)
+                if verbose and time.time() - start_time > 1:
+                    print('%d/%d' % (ns, num_steps))
+                    start_time = time.time()
+                print("ACTOR")
+                curr_act = actor.act_with_multi_memory(self)
 
-            # actor has to return a np array of bools
-            invalid_states = np.logical_not(np.array(self.curr_states_with_valid_history()))
+                # actor has to return a np array of bools
+                invalid_states = np.logical_not(np.array(self.curr_states_with_valid_history()))
+    
+                #print(invalid_states)
+                #print(actor.random_objective_coeffs)
+                if actor.random_objective_coeffs:
+                    actor.reset_objective_coeffs(np.where(invalid_states)[0].tolist())
+                curr_act[invalid_states] = actor.random_actions(np.sum(invalid_states)) #np.array(multi_simulator.get_random_actions())[invalid_states]
+
+                if write_predictions:
+                    aux = self.add_step(multi_simulator, acts=curr_act.tolist(), objs=actor.objectives_to_write(), preds=actor.curr_predictions,need_seg =need_seg)
+                else:
+                    aux = self.add_step(multi_simulator, acts=curr_act.tolist(), objs=actor.objectives_to_write(),need_seg = need_seg)
+                
+                # If we add a value, it's ok, we continue:
+                if aux is not False:
+                    ns+=1
+                
+                if write_logs:
+                    last_indices = np.array(self.get_last_indices())
+                    last_rewards = self._data['rewards'][last_indices]
+                    prev_meas = last_meas
+                    last_meas = self._data['measurements'][last_indices]
+                    last_terminals = self._data['terminals'][last_indices]
+                    accum_rewards += last_rewards
+                    accum_meas += last_meas
+                    num_episode_steps = num_episode_steps + 1
+                    #print(last_terminals)
+                    #print(num_episode_steps)
+                    terminated_simulators = list(np.where(last_terminals)[0])
+                    for ns in terminated_simulators:
+                        num_episodes += 1
+                        episode_time = time.time() - start_times[ns]
+                        avg_meas = accum_meas[ns]/float(num_episode_steps[ns])
+                        total_avg_meas += avg_meas
+                        total_final_meas += prev_meas[ns]
+                        total_accum_reward += accum_rewards[ns]
+                        start_times[ns] = time.time()
+                        log_detailed.write(log_detailed_format.format(*([num_episodes, num_episode_steps[ns], episode_time, accum_rewards[ns]] + list(prev_meas[ns]) + list(avg_meas))))
+                        accum_meas[ns] = 0
+                        accum_rewards[ns] = 0
+                        num_episode_steps[ns] = 0
+                        start_times[ns] = time.time()
+        else :
+            for ns in range(int(num_steps)):
  
-            #print(invalid_states)
-            #print(actor.random_objective_coeffs)
-            if actor.random_objective_coeffs:
-                actor.reset_objective_coeffs(np.where(invalid_states)[0].tolist())
-            curr_act[invalid_states] = actor.random_actions(np.sum(invalid_states)) #np.array(multi_simulator.get_random_actions())[invalid_states]
+                if verbose and time.time() - start_time > 1:
+                    print('%d/%d' % (ns, num_steps))
+                    start_time = time.time()
 
-            if write_predictions:
-                aux = self.add_step(multi_simulator, acts=curr_act.tolist(), objs=actor.objectives_to_write(), preds=actor.curr_predictions,need_seg =need_seg)
-            else:
-                aux = self.add_step(multi_simulator, acts=curr_act.tolist(), objs=actor.objectives_to_write(),need_seg = need_seg)
-            
-            # If we add a value, it's ok, we continue:
-            if aux is not False:
-                ns+=1
-            
-            if write_logs:
-                last_indices = np.array(self.get_last_indices())
-                last_rewards = self._data['rewards'][last_indices]
-                prev_meas = last_meas
-                last_meas = self._data['measurements'][last_indices]
-                last_terminals = self._data['terminals'][last_indices]
-                accum_rewards += last_rewards
-                accum_meas += last_meas
-                num_episode_steps = num_episode_steps + 1
-                #print(last_terminals)
-                #print(num_episode_steps)
-                terminated_simulators = list(np.where(last_terminals)[0])
-                for ns in terminated_simulators:
-                    num_episodes += 1
-                    episode_time = time.time() - start_times[ns]
-                    avg_meas = accum_meas[ns]/float(num_episode_steps[ns])
-                    total_avg_meas += avg_meas
-                    total_final_meas += prev_meas[ns]
-                    total_accum_reward += accum_rewards[ns]
-                    start_times[ns] = time.time()
-                    log_detailed.write(log_detailed_format.format(*([num_episodes, num_episode_steps[ns], episode_time, accum_rewards[ns]] + list(prev_meas[ns]) + list(avg_meas))))
-                    accum_meas[ns] = 0
-                    accum_rewards[ns] = 0
-                    num_episode_steps[ns] = 0
-                    start_times[ns] = time.time()
+                curr_act = actor.act_with_multi_memory(self)
+
+                # actor has to return a np array of bools
+                invalid_states = np.logical_not(np.array(self.curr_states_with_valid_history()))
+    
+                #print(invalid_states)
+                #print(actor.random_objective_coeffs)
+                if actor.random_objective_coeffs:
+                    actor.reset_objective_coeffs(np.where(invalid_states)[0].tolist())
+                curr_act[invalid_states] = actor.random_actions(np.sum(invalid_states)) #np.array(multi_simulator.get_random_actions())[invalid_states]
+
+                if write_predictions:
+                    self.add_step(multi_simulator, acts=curr_act.tolist(), objs=actor.objectives_to_write(), preds=actor.curr_predictions,need_seg =False)
+                else:
+                    self.add_step(multi_simulator, acts=curr_act.tolist(), objs=actor.objectives_to_write(),need_seg = False)
+                
+                # If we add a value, it's ok, we continue:
+
+                
+                if write_logs:
+                    last_indices = np.array(self.get_last_indices())
+                    last_rewards = self._data['rewards'][last_indices]
+                    prev_meas = last_meas
+                    last_meas = self._data['measurements'][last_indices]
+                    last_terminals = self._data['terminals'][last_indices]
+                    accum_rewards += last_rewards
+                    accum_meas += last_meas
+                    num_episode_steps = num_episode_steps + 1
+                    #print(last_terminals)
+                    #print(num_episode_steps)
+                    terminated_simulators = list(np.where(last_terminals)[0])
+                    for ns in terminated_simulators:
+                        num_episodes += 1
+                        episode_time = time.time() - start_times[ns]
+                        avg_meas = accum_meas[ns]/float(num_episode_steps[ns])
+                        total_avg_meas += avg_meas
+                        total_final_meas += prev_meas[ns]
+                        total_accum_reward += accum_rewards[ns]
+                        start_times[ns] = time.time()
+                        log_detailed.write(log_detailed_format.format(*([num_episodes, num_episode_steps[ns], episode_time, accum_rewards[ns]] + list(prev_meas[ns]) + list(avg_meas))))
+                        accum_meas[ns] = 0
+                        accum_rewards[ns] = 0
+                        num_episode_steps[ns] = 0
+                        start_times[ns] = time.time()
         if write_logs:
             if num_episodes == 0:
                 num_episodes = 1
