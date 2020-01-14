@@ -188,11 +188,9 @@ class ExperienceMemory:
         if need_seg :
             ns = 0
             while ns< num_steps:
-                print("IN",ns)
                 if verbose and time.time() - start_time > 1:
                     print('%d/%d' % (ns, num_steps))
                     start_time = time.time()
-                print("ACTOR")
                 curr_act = actor.act_with_multi_memory(self)
 
                 # actor has to return a np array of bools

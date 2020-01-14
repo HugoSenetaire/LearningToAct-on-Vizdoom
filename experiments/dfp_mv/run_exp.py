@@ -40,7 +40,7 @@ agent_args = {
     'preprocess_input_targets': lambda x: x / targ_scale_coeffs,
     'postprocess_predictions': lambda x: x * targ_scale_coeffs,
     'objective_coeffs_meas': np.array([1, 0.5, 0.5]),
-    'infer_modalities': ["segEnnemies","segMedkit"],
+    # 'infer_modalities': ["segEnnemies","segMedkit"],
     'start_learningtoact_training_iter' : 0,
     'freezeType' : "None" ,
     #Possibility are "None" : No Freeze; "Partial" : Only the end is trained; "All": Everything freezed 

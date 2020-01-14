@@ -43,6 +43,12 @@ class AgentMultimodalAdvantage(Agent):
                 depth_conv = my_ops.conv_encoder(input_sensory['depth'], self.depth_conv_params, 'depth_conv', msra_coeff=0.9)
                 depth_fc = my_ops.fc_net(my_ops.flatten(depth_conv), self.depth_fc_params, 'depth_fc', msra_coeff=0.9)
                 sensory_embeddings['depth'] = depth_fc
+            elif modality == 'segEnnemies':
+                segEnnemies_fc = my_ops.fc_net(my_ops.flatten(input_sensory['segEnnemies']), self.segEnnemies_fc_params, 'segEnnemies_fc', msra_coeff=0.9)
+                sensory_embeddings['segEnnemies'] = segEnnemies_fc
+            elif modality == 'segMedkit':
+                segMedkit_fc = my_ops.fc_net(my_ops.flatten(input_sensory['segMedkit']), self.segEnnemies_fc_params, 'segMedkit_fc', msra_coeff=0.9)
+                sensory_embeddings['segMedkit'] = segMedkit_fc
             elif modality == 'measurements':
                 meas_fc = my_ops.fc_net(input_sensory['measurements'], self.meas_fc_params, 'meas_fc', msra_coeff=0.9)
                 sensory_embeddings['measurements'] = meas_fc
