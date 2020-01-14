@@ -457,7 +457,7 @@ class Agent:
                     self.get_segmentation(test_simulator,experience,self.objective_coeffs,self.curr_step)
 
             self.train_one_batch(experience)
-            
+
             if np.mod(self.curr_step, self.add_experiences_every) == 0:
        
                 self.train_actor.random_prob = self.random_exploration_schedule(self.curr_step)
@@ -552,7 +552,7 @@ class Agent:
 
         if test_dataset == 'train':  # just take n training steps
             # NOTE: assumes num_steps * num_simulators == memory_capacity (for average meas below to be correct)
-            experience.add_n_steps_with_actor(simulator, 50000, actor, verbose=True,
+            experience.add_n_steps_with_actor(simulator, 10000, actor, verbose=True,
                                               write_predictions=write_predictions,
                                               write_logs=True, global_step=self.curr_step * self.batch_size)
             total_steps = num_steps * simulator.num_simulators
