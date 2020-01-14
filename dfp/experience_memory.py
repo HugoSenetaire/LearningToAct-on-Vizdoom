@@ -137,7 +137,7 @@ class ExperienceMemory:
                     continue
                 if np.sum(data_to_add["segEnnemies"][i])>0:
                     nbSegEnnemies+=1
-                if np.sum(data_to_add["segMedkit"])>0:
+                if np.sum(data_to_add["segMedkit"][i])>0:
                     nbSegMedikit+=1
             if float(nbSegEnnemies)/len(multi_simulator.simulators)>0.8 or \
              float(nbSegMedikit)/len(multi_simulator.simulators)>0.8 :
