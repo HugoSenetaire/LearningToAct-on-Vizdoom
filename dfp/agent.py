@@ -560,7 +560,7 @@ class Agent:
 
         if test_dataset == 'train':  # just take n training steps
             # NOTE: assumes num_steps * num_simulators == memory_capacity (for average meas below to be correct)
-            experience.add_n_steps_with_actor(simulator, 10000, actor, verbose=True,
+            experience.add_n_steps_with_actor(simulator, 25000, actor, verbose=True,
                                               write_predictions=write_predictions,
                                               write_logs=True, global_step=self.curr_step * self.batch_size)
             total_steps = num_steps * simulator.num_simulators
