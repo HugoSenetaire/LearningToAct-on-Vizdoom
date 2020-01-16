@@ -70,6 +70,11 @@ class Agent:
         self.roomtype_fc_params = args['roomtype_fc_params']
         self.infer_roomtype_fc_params = args['infer_roomtype_fc_params']
         self.goalroomtype_fc_params = args['goalroomtype_fc_params']
+        self.segEnnemies_conv_params = args['segEnnemies_conv_params']
+        self.segMedkit_conv_params = args['segMedkit_conv_params']
+        self.segClip_conv_params = args['segClip_conv_params']
+
+
         #self.valadv_fc_params = args['valadv_fc_params']
         self.weight_decay = args['weight_decay']
         self.unet_params = args['unet_params'] 
@@ -209,10 +214,11 @@ class Agent:
         self.infer_sensory, self.pred_all, self.pred_relevant = \
             self.make_net(self.input_sensory_preprocessed, self.input_actions, self.input_objective_coeffs)
         # Hookup losses
-        self.full_loss, self.errs_to_print, self.short_summary, self.detailed_summary = \
+        self.full_loss, self.target_loss, self.infer_sensory_loss, self.errs_to_print, self.short_summary, self.detailed_summary = \
             self.make_losses(self.infer_sensory, self.input_sensory_preprocessed,
                              self.pred_relevant, self.input_targets_preprocessed,
-                             self.objective_indices, self.objective_coeffs,self.coefs_loss)
+                             self.objective_indices, self.objective_coeffs,
+                             self.coefs_loss)
 
         # make the saver, lr and param summaries
         self.saver = tf.train.Saver(max_to_keep=0)
@@ -347,18 +353,20 @@ class Agent:
 
         feed_dict = {self.input_sensory[m]: states[m] for m in self.modalities}
         feed_dict.update({self.input_targets: targs, self.input_actions: acts, self.input_objective_coeffs: objs,self.coefs_loss : self.coefs_loss_value[indexCoef]})
-        res = self.sess.run([self.tf_minim, self.short_summary,self.coefs_loss, self.detailed_summary] + self.errs_to_print, \
+        res = self.sess.run([self.tf_minim,self.target_loss,self.infer_sensory_loss, self.short_summary,self.coefs_loss, self.detailed_summary] + self.errs_to_print, \
                             feed_dict=feed_dict)
-
-        curr_short_summary = res[1]
-        curr_detailed_summary = res[3]
-        curr_errs = res[4:]
-        currCoef = res[2]
+        target_loss = res[1]
+        infer_sensory_loss = res[2]
+        curr_short_summary = res[3]
+        curr_detailed_summary = res[5]
+        curr_errs = res[6:]
+        currCoef = res[4]
   
         if np.mod(self.curr_step, self.print_err_every) == 0:
-            print(time.strftime("[%Y/%m/%d %H:%M:%S] ") + "[Batch %4d] time: %4.4f, losses: " \
+            print(time.strftime("[%Y/%m/%d %H:%M:%S] ") + "[Batch %4d] time: %4.4f, losses total: " \
                 % (self.curr_step,  time.time() - self.prev_time), curr_errs)
-            print("CURRENT COEF : ", currCoef)
+            print(f'Loss infermodality {infer_sensory_loss} and loss learning to act {target_loss}')
+            print("CURRENT COEF a : ", currCoef)
             self.prev_time = time.time()
             self.writer.add_summary(curr_short_summary, self.curr_step)
 
@@ -479,9 +487,9 @@ class Agent:
         # Populate inputs - sensory inputs, actions, and targets to predict
         feed_dict = {self.input_sensory[m]: states[m] for m in self.modalities}
         feed_dict.update({self.input_targets: targs, self.input_actions: acts, self.input_objective_coeffs: objs,self.coefs_loss : self.coefs_loss_value[0],})
-        res = self.sess.run([self.tf_minim, self.short_summary, self.detailed_summary] + self.errs_to_print, \
+        res = self.sess.run([self.infer_sensory_loss,self.tf_minim, self.short_summary, self.detailed_summary] + self.errs_to_print, \
                             feed_dict=feed_dict)
-        print("Results for inference : ", res)
+        print("Loss for modality is : ", res[0])
 
     def get_segmentation(self,simulator,experience,objective_coeffs,curr_step):
         if not os.path.exists("images"):

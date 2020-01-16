@@ -194,7 +194,7 @@ def UNET(data,params,name,msra_coeff=1):
                 k_h=2, k_w=2, \
                  d_h=2, d_w=2, \
                   name=name+"OUTPUT", msra_coeff=msra_coeff))
-    return outputDecoded
+    return outputDecoded,dataAux
 
 
 

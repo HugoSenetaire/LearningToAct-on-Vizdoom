@@ -108,6 +108,9 @@ agent_args['weight_decay'] = 0.00000
 agent_args['segEnnemies_fc_params']   = np.array([(512,)], dtype = [('out_dims',int)])
 agent_args['segMedkit_fc_params']   = np.array([(512,)], dtype = [('out_dims',int)])
 agent_args['segClip_fc_params'] = np.array([(512,)],dtype = [('out_dims',int)])
+agent_args['segEnnemies_conv_params'] = np.array([(32,8,4), (64,4,2), (64,3,1)], dtype = [('out_channels',int), ('kernel',int), ('stride',int)])
+agent_args['segMedkit_conv_params'] = np.array([(32,8,4), (64,4,2), (64,3,1)], dtype = [('out_channels',int), ('kernel',int), ('stride',int)])
+agent_args['segClip_conv_params'] = np.array([(32,8,4), (64,4,2), (64,3,1)], dtype = [('out_channels',int), ('kernel',int), ('stride',int)])
 agent_args['unet_params'] = np.array([(4,2,2), (8,2,2), (16,2,2)],
 									 dtype = [('out_channels',int), ('kernel',int), ('stride',int)])
 ## Experiment

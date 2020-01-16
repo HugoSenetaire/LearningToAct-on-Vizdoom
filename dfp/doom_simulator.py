@@ -118,23 +118,7 @@ class DoomSimulator:
             # print("SEGMENTATION SHAPE",segmentation.shape)
             segmentation=np.around(cv2.resize(segmentation, (self.resolution[0], self.resolution[1]))[None,:,:])
             segmentation = np.where(segmentation>10.,1,0)
-            # if FOUND:
-            #     plt.imshow(segmentation.reshape((64,64)))
-            #     plt.show()
-            # if FOUND :
-            #     import matplotlib.pyplot as plt
-            #     print(state.screen_buffer.shape)
-            #     print(output)
-            #     plt.figure(1)
-            #     plt.imshow(state.screen_buffer.reshape(120,160))
-            #     plt.figure(2)
-            #     plt.imshow(state.labels_buffer.reshape(120,160))
-            #     plt.figure(3)
-            #     plt.imshow(segmentationAux.reshape(120,160))
-            #     plt.figure(4)
-            #     plt.imshow(segmentation.reshape(64,64))
-            #     plt.show()
-            #     assert(1==0)
+           
 
         return segmentation
 

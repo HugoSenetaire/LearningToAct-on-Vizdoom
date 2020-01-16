@@ -44,12 +44,15 @@ class AgentMultimodalAdvantage(Agent):
                 depth_fc = my_ops.fc_net(my_ops.flatten(depth_conv), self.depth_fc_params, 'depth_fc', msra_coeff=0.9)
                 sensory_embeddings['depth'] = depth_fc
             elif modality == 'segEnnemies':
-                segEnnemies_fc = my_ops.fc_net(my_ops.flatten(input_sensory['segEnnemies']), self.segEnnemies_fc_params, 'segEnnemies_fc', msra_coeff=0.9)
+                segEnnemies_conv = my_ops.conv_encoder(input_sensory['segEnnemies'], self.segEnnemies_conv_params, 'segEnnemies_conv', msra_coeff=0.9)
+                segEnnemies_fc = my_ops.fc_net(my_ops.flatten(segEnnemies_conv), self.segEnnemies_fc_params, 'segEnnemies_fc', msra_coeff=0.9)
                 sensory_embeddings['segEnnemies'] = segEnnemies_fc
             elif modality == 'segMedkit':
+                segMedkit_conv = my_ops.conv_encoder(input_sensory['segMedkit'], self.segMedkit_conv_params, 'segMedkit_conv', msra_coeff=0.9)
                 segMedkit_fc = my_ops.fc_net(my_ops.flatten(input_sensory['segMedkit']), self.segEnnemies_fc_params, 'segMedkit_fc', msra_coeff=0.9)
                 sensory_embeddings['segMedkit'] = segMedkit_fc
             elif modality == 'segClip':
+                segClip_conv = my_ops.conv_encoder(input_sensory['segClip'], self.segClip_conv_params, 'segClip_conv', msra_coeff=0.9)
                 segClip_fc = my_ops.fc_net(my_ops.flatten(input_sensory['segClip']), self.segEnnemies_fc_params, 'segClip_fc', msra_coeff=0.9)
                 sensory_embeddings['segClip'] = segClip_fc
             elif modality == 'measurements':
@@ -81,7 +84,7 @@ class AgentMultimodalAdvantage(Agent):
         input_concat_fc = tf.concat([sensory_embeddings[modality] for modality in sorted(sensory_embeddings)], 1)
 
         # infer modalities from input_concat_fc
-        infer_sensory_embeddings = {}
+        infer_sensory_embeddings = {} # Used for learning to act training
         for modality in self.infer_modalities:
             if modality == 'measurements':
                 # handle this one below
@@ -92,22 +95,20 @@ class AgentMultimodalAdvantage(Agent):
                 sensory_embeddings[modality] = roomtype_fc
                 infer_sensory_embeddings[modality] = roomtype_fc
             elif modality == 'segEnnemies':
-                segEnnemies_UNET = my_ops.UNET(input_sensory['color'],self.unet_params,'UNETEnnemies',msra_coeff=0.9)
-                sensory_embeddings[modality] =  my_ops.fc_net(my_ops.flatten(segEnnemies_UNET), self.segEnnemies_fc_params, 'segEnnemies_fc', msra_coeff=0.9)
+                segEnnemies_UNET,segEnnemies_conv = my_ops.UNET(input_sensory['color'],self.unet_params,'UNETsegEnnemies',msra_coeff=0.9)
+                sensory_embeddings[modality] =  my_ops.fc_net(my_ops.flatten(segEnnemies_conv), self.segEnnemies_fc_params, 'segEnnemies_fc', msra_coeff=0.9)
                 infer_sensory_embeddings[modality] = segEnnemies_UNET
             elif modality == 'depth':
                 depth_Unet = my_ops.UNET(input_sensory['color'],self.unet_params,'UNETDepth',msra_coeff=0.9)
-                depth_conv = my_ops.conv_encoder(depth_Unet, self.depth_conv_params, 'depth_conv', msra_coeff=0.9)
                 depth_fc = my_ops.fc_net(my_ops.flatten(depth_conv), self.depth_fc_params, 'depth_fc', msra_coeff=0.9)
-                sensory_embeddings[modality] =  depth_fc
-                infer_sensory_embeddings[modality] = depth_Unet
+                sensory_embeddings[modality] =  depth_Unet
             elif modality == 'segMedkit' :
-                segMedkit_UNET = my_ops.UNET(input_sensory['color'],self.unet_params,'UNETMedKit',msra_coeff=0.9)
-                sensory_embeddings[modality] =  my_ops.fc_net(my_ops.flatten(segMedkit_UNET), self.segEnnemies_fc_params, 'segMedkit_fc', msra_coeff=0.9)
+                segMedkit_UNET,segMedkit_conv = my_ops.UNET(input_sensory['color'],self.unet_params,'UNETsegMedkit',msra_coeff=0.9)
+                sensory_embeddings[modality] =  my_ops.fc_net(my_ops.flatten(segMedkit_conv), self.segMedkit_fc_params, 'segMedkit_fc', msra_coeff=0.9)
                 infer_sensory_embeddings[modality] = segMedkit_UNET
             elif modality == 'segClip' :
-                segClip_UNET = my_ops.UNET(input_sensory['color'],self.unet_params,'UNETClip',msra_coeff=0.9)
-                sensory_embeddings[modality] =  my_ops.fc_net(my_ops.flatten(segClip_UNET), self.segEnnemies_fc_params, 'segClip_fc', msra_coeff=0.9)
+                segClip_UNET,segClip_conv = my_ops.UNET(input_sensory['color'],self.unet_params,'UNETsegClip',msra_coeff=0.9)
+                sensory_embeddings[modality] =  my_ops.fc_net(my_ops.flatten(segClip_conv), self.segClip_fc_params, 'segClip_fc', msra_coeff=0.9)
                 infer_sensory_embeddings[modality] = segClip_UNET
             else:
                 raise Exception('Unsupported infer modality %s' % modality)
@@ -141,7 +142,8 @@ class AgentMultimodalAdvantage(Agent):
         return infer_sensory_embeddings, pred_all, pred_relevant
 
     def make_losses(self, infer_sensory, input_infer_sensory_preprocessed,
-                    pred_relevant, targets_preprocessed, objective_indices, objective_coeffs,coefs_loss):
+                    pred_relevant, targets_preprocessed, objective_indices,
+                     objective_coeffs,coefs_loss):
         """
         Setup the losses
 
@@ -209,7 +211,7 @@ class AgentMultimodalAdvantage(Agent):
         short_summary = [loss_sum, loss_infer_sum]
         detailed_summary = per_target_loss_sums + [obj_sum]
 
-        return full_loss, errs_to_print, short_summary, detailed_summary
+        return full_loss, target_loss, infer_sensory_loss, errs_to_print, short_summary, detailed_summary
 
     def act_net(self, states, objective_coeffs):
         """
