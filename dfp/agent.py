@@ -365,7 +365,7 @@ class Agent:
         if np.mod(self.curr_step, self.print_err_every) == 0:
             print(time.strftime("[%Y/%m/%d %H:%M:%S] ") + "[Batch %4d] time: %4.4f, losses total: " \
                 % (self.curr_step,  time.time() - self.prev_time), curr_errs)
-            print(f'Loss infermodality {infer_sensory_loss} and loss learning to act {target_loss}')
+            print('Loss infermodality ' + str(infer_sensory_loss) + ' and loss learning to act ' + str(target_loss))
             print("CURRENT COEF a : ", currCoef)
             self.prev_time = time.time()
             self.writer.add_summary(curr_short_summary, self.curr_step)
