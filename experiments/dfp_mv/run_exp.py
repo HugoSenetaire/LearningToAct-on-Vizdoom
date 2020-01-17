@@ -48,6 +48,7 @@ agent_args = {
     'coefs_loss' : [0.,0.5], # coefs_loss [0] : coefficient for learning to act when not learning to act; coef[1] after
     'test_inference_every' : 500,
     'change_inference_dataset_every':10000,
+    'list_frozen': []
 }
 agent_args['unet_params'] = np.array([(4,2,2), (8,2,2), (16,2,2)],
 									 dtype = [('out_channels',int), ('kernel',int), ('stride',int)])

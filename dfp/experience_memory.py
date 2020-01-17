@@ -135,9 +135,11 @@ class ExperienceMemory:
             nbSegEnnemies = 0
             nbSegMedikit = 0
             nbSegClip = 0
+
+            keys = data_to_add.keys()
             for i in range(len(multi_simulator.simulators)):
                 
-                if np.sum(data_to_add["segEnnemies"][i])>0:
+                if "segEnnemies" in keys and np.sum(data_to_add["segEnnemies"][i])>0:
                     # import matplotlib.pyplot as plt
                     # plt.figure(1)
                     # plt.imshow(data_to_add["segEnnemies"][i].reshape(64,64))
@@ -146,9 +148,9 @@ class ExperienceMemory:
                     # plt.show()
                     # assert(1==0)
                     nbSegEnnemies+=1
-                if np.sum(data_to_add["segMedkit"][i])>0:
+                if "segMedkit" in keys and np.sum(data_to_add["segMedkit"][i])>0:
                     nbSegMedikit+=1
-                if np.sum(data_to_add["segClip"][i])>0:
+                if "segClip" in keys and np.sum(data_to_add["segClip"][i])>0:
                     nbSegClip+=1
             if float(nbSegEnnemies)/len(multi_simulator.simulators)>0.5 or \
              float(nbSegMedikit)/len(multi_simulator.simulators)>0.5 or \

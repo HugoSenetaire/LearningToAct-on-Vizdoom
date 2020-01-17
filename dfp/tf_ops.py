@@ -48,7 +48,8 @@ def conv2d_transpose(input_, output_dim,
             # w = tf.get_variable('w', [k_h, k_w, input_.get_shape()[-1], output_dim],
         #                     initializer=tf.truncated_normal_initializer(stddev=msra_coeff * msra_stddev(input_, k_h, k_w)))
         # return tf.nn.conv2d_transpose(input_, w,output_shape=tf.stack([64,input_.get_shape()[1]*2,input_.get_shape()[2]*2,input_.get_shape()[3]]), strides=[1, d_h, d_w, 1], padding='SAME')
-        return tf.keras.layers.Conv2DTranspose(output_dim, (k_h, k_w), strides=(d_h, d_w), padding='same')(input_)
+        with tf.variable_scope(name):
+            return tf.keras.layers.Conv2DTranspose(output_dim, (k_h, k_w), strides=(d_h, d_w), padding='same')(input_)
 
 
 def lrelu(x, leak=0.2, name="lrelu"):

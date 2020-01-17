@@ -100,6 +100,7 @@ class Agent:
         self.coefs_loss_value = args["coefs_loss"]
         self.test_inference_every = args["test_inference_every"]
         self.change_inference_dataset_every = args["change_inference_dataset_every"]
+        self.list_frozen = args["list_frozen"]
         
 
         # directories
@@ -237,8 +238,8 @@ class Agent:
             print('Unknown optimizer', self.optimizer)
             raise
 
-        if not hasattr(self, 't_vars'):
-            self.t_vars = tf.trainable_variables()
+        if not hasattr(self, 't_vars'): # Return True if has the given attribute
+            self.t_vars = tf.trainable_variables() 
 
         # weight decay
         self.weights_norms = tf.reduce_sum(input_tensor = self.weight_decay * tf.stack([tf.nn.l2_loss(w) for w in self.t_vars]), name='weights_norm')
@@ -260,7 +261,43 @@ class Agent:
         self.detailed_summary = tf.summary.merge(self.detailed_summary + [tf.summary.scalar("learning_rate", self.tf_learning_rate)])
         self.param_summary = tf.summary.merge(param_hists + grad_hists)
 
+       
+
         tf.global_variables_initializer().run(session=self.sess)
+
+    def change_trainability_to_false(self):
+        if not hasattr(self, 't_vars'): # Return True if has the given attribute
+            self.t_vars = tf.trainable_variables() 
+        # Change trainability around here for the variable
+
+        var = []
+        self.auxVar = []
+        for variable in self.t_vars:
+            # print(variable.name)
+            if "conv" in variable.name or "UNET" in variable.name or "transpose" in variable.name :
+                for valuetochange in self.list_frozen:
+                    if valuetochange in variable.name:
+                        # print("CHICKITICHECK")
+                        # self.auxVar.append(variable)
+                        continue
+                    else :
+                        var.append(variable)
+
+        
+        self.t_vars = var
+        self.loss_with_weight_decay = self.full_loss + self.weights_norms
+
+        if self.clip_gradient:
+            grads, grad_norm = tf.clip_by_global_norm(tf.gradients(self.loss_with_weight_decay, self.t_vars), self.clip_gradient)
+            self.detailed_summary += [tf.summary.scalar("gradient_norm", grad_norm)]
+            grads_and_vars = zip(grads,self.t_vars)
+        else:
+            grads_and_vars = self.tf_optim.compute_gradients(self.loss_with_weight_decay, var_list=self.t_vars)
+
+        self.tf_minim = self.tf_optim.apply_gradients(grads_and_vars, global_step=self.tf_step)
+
+
+      
 
     def act(self, states, objective_coeffs):
         return self.postprocess_actions(self.act_net(states, objective_coeffs), self.act_manual(states['measurements'][:,self.meas_for_manual]))
@@ -361,6 +398,7 @@ class Agent:
         curr_detailed_summary = res[5]
         curr_errs = res[6:]
         currCoef = res[4]
+        
   
         if np.mod(self.curr_step, self.print_err_every) == 0:
             print(time.strftime("[%Y/%m/%d %H:%M:%S] ") + "[Batch %4d] time: %4.4f, losses total: " \
@@ -404,9 +442,6 @@ class Agent:
 
         self.train_actor = self.get_actor(objective_coeffs=self.objective_coeffs,
                                           random_prob=self.random_exploration_schedule(self.curr_step),random_objective_coeffs=self.random_objective_coeffs)
-        
-
-
         print("==========================")
         print("Training without learning to act")
         print("==========================")
@@ -433,8 +468,9 @@ class Agent:
                     experience.add_n_steps_with_actor(simulator,
                                                     experience.capacity / simulator.num_simulators,
                                                     self.train_actor,need_seg = True)
-            
-        
+        print("Change the trainability for the following infer modalities : ", self.list_frozen)
+        if len(self.infer_modalities)>0 and len(self.list_frozen)>0:
+            self.change_trainability_to_false()
         ##=============================================== Training for learning to act ===============================
         print("==========================")
         print("STARTING LEARNING TO ACT")
