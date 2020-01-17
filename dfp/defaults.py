@@ -115,7 +115,7 @@ agent_args['unet_params'] = np.array([(4,2,2), (8,2,2), (16,2,2)],
 									 dtype = [('out_channels',int), ('kernel',int), ('stride',int)])
 ## Experiment
 experiment_args = {}
-experiment_args['num_train_iterations'] = 410000 #820000
+experiment_args['num_train_iterations'] = 820000 #820000
 # experiment_args['test_random_prob'] = 0.1
 experiment_args['test_random_prob'] = 0.1
 experiment_args['test_policy_num_steps'] = 1000
