@@ -130,13 +130,16 @@ class ExperienceMemory:
         if not (preds is None):
             data_to_add['predictions'] = preds
         
+        keys = data_to_add.keys()
         # USE THE LINE BELOW TO MAKE SURE WE GET PROPER IMAGES FOR SEGMENTATION
+        if not ("segEnnemies" in keys or "segMedkit" in keys or "segClip" in keys) :
+            need_seg = False
         if need_seg :
             nbSegEnnemies = 0
             nbSegMedikit = 0
             nbSegClip = 0
 
-            keys = data_to_add.keys()
+            
             for i in range(len(multi_simulator.simulators)):
                 
                 if "segEnnemies" in keys and np.sum(data_to_add["segEnnemies"][i])>0:
