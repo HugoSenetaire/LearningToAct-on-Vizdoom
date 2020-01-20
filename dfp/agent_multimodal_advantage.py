@@ -101,7 +101,7 @@ class AgentMultimodalAdvantage(Agent):
             elif modality == 'depth':
                 depth_Unet,depth_conv = my_ops.UNET(input_sensory['color'],self.unet_params,'UNETDepth',msra_coeff=0.9)
                 depth_fc = my_ops.fc_net(my_ops.flatten(depth_conv), self.depth_fc_params, 'depth_fc', msra_coeff=0.9)
-                sensory_embeddings[modality] =  depth_Unet
+                infer_sensory_embeddings[modality] =  depth_Unet
             elif modality == 'segMedkit' :
                 segMedkit_UNET,segMedkit_conv = my_ops.UNET(input_sensory['color'],self.unet_params,'UNETsegMedkit',msra_coeff=0.9)
                 sensory_embeddings[modality] =  my_ops.fc_net(my_ops.flatten(segMedkit_conv), self.segMedkit_fc_params, 'segMedkit_fc', msra_coeff=0.9)
